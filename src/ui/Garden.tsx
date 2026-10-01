@@ -22,7 +22,8 @@ export const TEMPLATES: Array<{ name: string; desc: string; beds: Array<Omit<Bed
 
 export default function Garden() {
   const site = useSite(); const s = useSettings();
-  const date = s.selectedDate ?? todayYmd(site.tz);
+  const [preview, setPreview] = useState<string | null>(null);
+  const date = preview ?? s.selectedDate ?? todayYmd(site.tz);
   const [sel, setSel] = useState<Sel>(null);
   const [view, setView] = useState<'2d' | '3d'>('2d');
   const [hour, setHour] = useState(14);
@@ -139,8 +140,8 @@ export default function Garden() {
         <div className="row" style={{ marginTop: 8 }}>
           <label className="f" style={{ minWidth: 220 }}><span>Orientation: top of plan points {bearingToDir(site.rotationDeg)} ({site.rotationDeg}°)</span><input type="range" min={0} max={359} value={site.rotationDeg} onChange={e => updateSite(site.id, { rotationDeg: +e.target.value })} /></label>
           <label className="f" style={{ minWidth: 220 }}><span>Sun at {String(hour).padStart(2, '0')}:00 on {fmtYMD(date)} — {sunNow.altitude > 0 ? `${sunNow.altitude.toFixed(0)}° high, ${bearingToDir(sunNow.azimuth)}` : 'below horizon'}</span><input type="range" min={0} max={23} value={hour} onChange={e => setHour(+e.target.value)} /></label>
-          <label className="f"><span>Season (date is in the top bar)</span><div className="row">
-            {([['Today', todayYmd(site.tz)], ['Mar 20', `${date.slice(0, 4)}-03-20`], ['Jun 21', `${date.slice(0, 4)}-06-21`], ['Sep 22', `${date.slice(0, 4)}-09-22`], ['Dec 21', `${date.slice(0, 4)}-12-21`]] as const).map(([l, d]) => <button key={l} className={`chip ${date === d ? 'on' : ''}`} onClick={() => setState({ selectedDate: d === todayYmd(site.tz) ? undefined : d })}>{l}</button>)}</div></label>
+          <label className="f"><span>Preview another season {preview ? <span style={{ color: 'var(--gold)' }}>(previewing {fmtYMD(preview)} — the rest of the app stays on {fmtYMD(s.selectedDate ?? todayYmd(site.tz))})</span> : '(does not change the date in the top bar)'}</span><div className="row">
+            {([['Top-bar date', null], ['Mar 20', `${date.slice(0, 4)}-03-20`], ['Jun 21', `${date.slice(0, 4)}-06-21`], ['Sep 22', `${date.slice(0, 4)}-09-22`], ['Dec 21', `${date.slice(0, 4)}-12-21`]] as Array<[string, string | null]>).map(([l, d]) => <button key={l} className={`chip ${preview === d ? 'on' : ''}`} onClick={() => setPreview(d)}>{l}</button>)}</div></label>
           <label className="row" style={{ fontSize: 13 }}><input type="checkbox" style={{ width: 'auto' }} checked={showShadows} onChange={e => setShowShadows(e.target.checked)} />shadows</label>
           <span className="sr">sunrise {sunrise ? fmtTime(sunrise, site.tz) : '—'} · sunset {sunset ? fmtTime(sunset, site.tz) : '—'}</span>
         </div>

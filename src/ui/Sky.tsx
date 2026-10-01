@@ -303,8 +303,9 @@ function MonthStrip({ month, setMonth, today }: { month: string; setMonth: (m: s
 function YearWheel({ year, today }: { year: number; today: string }) {
   const site = useSite();
   const off = tzOffsetHours(site.tz, new Date());
-  const R = 150, cx = 190, cy = 190;
-  const ang = (lon: number) => -Math.PI / 2 - ((lon - 90) * Math.PI) / 180;
+  const R = 150, cx = 215, cy = 200;
+  // Clockwise like a clock face: June solstice at the top, December at the bottom, March on the left, September on the right.
+  const ang = (lon: number) => -Math.PI / 2 + ((lon - 90) * Math.PI) / 180;
   const pt = (lon: number, r: number) => [cx + r * Math.cos(ang(lon)), cy + r * Math.sin(ang(lon))];
   const sunLonAt = (ymd: string) => A.SunPosition(noonAtOffset(ymd, off)).elon;
   const data = useMemo(() => {
@@ -318,16 +319,16 @@ function YearWheel({ year, today }: { year: number; today: string }) {
     const peri = A.SearchPlanetApsis(A.Body.Earth, new Date(Date.UTC(year, 0, 1)));
     return { terms, monthStarts, newMoons, fullMoons, lf: sunLonAt(`${year}-${site.lastFrost}`), ff: sunLonAt(`${year}-${site.firstFrost}`), todayLon: sunLonAt(today), perihelionLon: A.SunPosition(peri.time.date).elon, perihelionYmd: civilDateAtOffset(peri.time.date, off) };
   }, [year, off, site.lastFrost, site.firstFrost, today]);
-  const arc = (a: number, b: number, r: number) => { const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r); const sweep = ((b - a + 360) % 360) > 180 ? 1 : 0; return `M ${x1} ${y1} A ${r} ${r} 0 ${sweep} 0 ${x2} ${y2}`; };
+  const arc = (a: number, b: number, r: number) => { const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r); const large = ((b - a + 360) % 360) > 180 ? 1 : 0; return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`; };
   return (
     <div className="card wide">
       <h2>The year as the Sun sees it <small>· {year} · angle = Sun's ecliptic longitude, so the 24 solar terms are evenly spaced and the calendar months are not</small></h2>
       <div className="row" style={{ alignItems: 'flex-start' }}>
-        <svg viewBox="0 0 380 380" width="380" style={{ maxWidth: '100%' }}>
+        <svg viewBox="0 0 430 400" width="430" style={{ maxWidth: '100%' }}>
           <circle cx={cx} cy={cy} r={R} fill="none" stroke="var(--line)" />
           <circle cx={cx} cy={cy} r={R - 34} fill="none" stroke="var(--line)" />
           <path d={arc(data.lf, data.ff, R - 17)} stroke="var(--accent)" strokeWidth={30} fill="none" opacity={.25} />
-          {[['Summer solstice', 90], ['Winter solstice', 270], ['Spring equinox', 0], ['Autumn equinox', 180]].map(([l, lon]) => { const [x, y] = pt(+lon, R + 22); return <text key={l as string} x={x} y={y} fontSize={9} textAnchor="middle" fill="var(--muted)">{l}</text>; })}
+          {([['Summer solstice', 90, 'middle', 0, -8], ['Winter solstice', 270, 'middle', 0, 16], ['Spring equinox', 0, 'end', -8, 4], ['Autumn equinox', 180, 'start', 8, 4]] as Array<[string, number, string, number, number]>).map(([l, lon, anchor, dx, dy]) => { const [x, y] = pt(lon, R + 4); return <text key={l} x={x + dx} y={y + dy} fontSize={9.5} textAnchor={anchor as any} fill="var(--muted)">{l}</text>; })}
           {data.terms.map(e => { const [x1, y1] = pt(e.def.lon, R), [x2, y2] = pt(e.def.lon, R - 6), [tx, ty] = pt(e.def.lon + 7.5, R - 24); return <g key={e.def.i}><line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--fg)" /><text x={tx} y={ty + 3} fontSize={8.5} textAnchor="middle" fill="var(--fg)">{e.def.zh}</text><title>{e.def.ko} {e.def.en} — {e.ymd}</title></g>; })}
           {data.monthStarts.map((mm, i) => { const [x1, y1] = pt(mm.lon, R - 34), [x2, y2] = pt(mm.lon, R - 42), [tx, ty] = pt(mm.lon + 14, R - 52); return <g key={i}><line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--muted)" /><text x={tx} y={ty + 3} fontSize={9} textAnchor="middle" fill="var(--muted)">{new Date(Date.UTC(2001, i, 1)).toLocaleDateString(undefined, { month: 'short', timeZone: 'UTC' })}</text></g>; })}
           {data.newMoons.map((mm, i) => { const [x, y] = pt(mm.lon, R - 70); return <g key={'n' + i}><circle cx={x} cy={y} r={5} fill="#0f1a13" stroke="var(--fg)" /><text x={x} y={y + 14} fontSize={7.5} textAnchor="middle" fill="var(--muted)">{mm.leap ? '윤' : ''}{mm.month}월</text><title>New Moon {mm.ymd} — start of 음력 {mm.leap ? '윤' : ''}{KO_MONTHS[mm.month - 1]}</title></g>; })}
@@ -336,9 +337,10 @@ function YearWheel({ year, today }: { year: number; today: string }) {
           {(() => { const [x, y] = pt(data.todayLon, R - 17); const [x0, y0] = pt(data.todayLon, R - 100); return <g><line x1={x0} y1={y0} x2={x} y2={y} stroke="var(--accent2)" strokeWidth={2} /><circle cx={x} cy={y} r={6} fill="var(--accent2)" /><title>{today}</title></g>; })()}
           <text x={cx} y={cy - 6} textAnchor="middle" fontSize={22} fontWeight={700} fill="var(--fg)">{year}</text>
           <text x={cx} y={cy + 12} textAnchor="middle" fontSize={9} fill="var(--muted)">frost-free {fmtMD(site.lastFrost)} – {fmtMD(site.firstFrost)}</text>
+          <text x={cx} y={cy + 26} textAnchor="middle" fontSize={9} fill="var(--gold)">● {fmtYMD(today)}</text>
         </svg>
         <div style={{ flex: 1, minWidth: 220 }} className="sr">
-          <p><b>Read it like this.</b> The Sun moves anticlockwise. Each spoke on the outer ring is a 节气/절기 — fifteen degrees of the Sun's path, about fifteen days. The grey ticks are the Gregorian months: they drift against the terms because our calendar is not tied to the Sun's longitude the way the terms are.</p>
+          <p><b>Read it like this.</b> The year runs clockwise like a clock face: June at the top, December at the bottom. Each spoke on the outer ring is a 节气/절기 — fifteen degrees of the Sun's path, about fifteen days. The grey ticks are the Gregorian months: they drift against the terms because our calendar is not tied to the Sun's longitude the way the terms are.</p>
           <p>The beads on the inner ring are the new Moons (dark) and full Moons (light). Twelve and a bit lunations fit in a solar year, which is why the Korean and Chinese calendars insert a leap month (윤달/闰月) every two or three years — you can see the extra bead when it happens.</p>
           <p>The green band is your frost-free season at {site.name}. The amber dot is perihelion: Earth is closest to the Sun in early January, so seasons come from tilt, not distance.</p>
         </div>
