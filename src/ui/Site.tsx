@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { newSiteId, setState, updateSite, useSettings, useSite, type SiteConfig, TULSA } from '../state/store';
 import { TRADITIONS, DEFAULT_ENABLED } from '../traditions';
 import { CLIMATES, SOIL_INFO, type SoilType } from '../data/plants';
-import { geocode, fetchForecast, type Forecast } from '../services/climate';
+import { geocode, fetchForecast, climatePreset, type Forecast } from '../services/climate';
 import { buildSitePack, deletePack, exportPacks, loadAllPacks, loadPack, savePack, type SitePack } from '../services/sitepack';
 import { fetchLatest, type Reading } from '../services/water';
 import { fmtMD, Toast } from './common';
@@ -27,7 +27,7 @@ export default function Site() {
   const applyPack = (p: SitePack, target: SiteConfig) => {
     const patch: Partial<SiteConfig> = {};
     if (p.elevationM != null) patch.elevationM = Math.round(p.elevationM);
-    if (p.climate) { patch.lastFrost = p.climate.lastSpring.p90; patch.firstFrost = p.climate.firstFall.median; } // safe spring date (frost-free in 90 % of years), average autumn date
+    if (p.climate) { patch.lastFrost = p.climate.lastSpring.p90; patch.firstFrost = p.climate.firstFall.median; patch.climateId = climatePreset(p.climate, target.lat); } // safe spring date (frost-free in 90 % of years), average autumn date
     if (p.wind) patch.windDeg = p.wind.growingSeasonDominantDeg;
     if (p.soil?.summary.clay != null) { patch.soil = p.soil.summary.type; if (p.soil.summary.ph) patch.soilPh = p.soil.summary.ph; }
     updateSite(target.id, patch);

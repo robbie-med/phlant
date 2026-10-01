@@ -6,6 +6,19 @@ export async function geocode(q: string, signal?: AbortSignal): Promise<Place[]>
   return (j.results ?? []).map((r: any) => ({ name: r.name, admin1: r.admin1, country: r.country, lat: r.latitude, lon: r.longitude, tz: r.timezone, elevationM: r.elevation }));
 }
 
+/** Rough Köppen-style preset from the pack statistics (ids match CLIMATES in data/plants.ts). */
+export function climatePreset(c: FrostStats, lat: number): string {
+  const annual = c.monthlyRain.reduce((a, b) => a + b, 0);
+  const summer = lat >= 0 ? c.monthlyRain[5] + c.monthlyRain[6] + c.monthlyRain[7] : c.monthlyRain[11] + c.monthlyRain[0] + c.monthlyRain[1];
+  if (annual < 450) return 'semi_arid';
+  if (c.frostFreeDays < 110) return 'subarctic';
+  if (summer < 0.15 * annual && c.minTempMeanC > -6) return 'mediterranean';
+  if (c.minTempMeanC > -3 && c.hottestWeekMaxC < 27) return 'oceanic';
+  if (c.minTempMeanC > -2 && annual > 1200 && Math.abs(lat) < 30) return 'subtropical_monsoon';
+  if (c.minTempMeanC < -12 || c.hottestWeekMaxC < 30) return 'humid_continental';
+  return 'humid_subtropical';
+}
+
 export interface FrostStats {
   years: number; source: string; thresholdC: number;
   lastSpring: { median: string; p10: string; p90: string; perYear: Record<string, string | null> }; // MM-DD
@@ -94,9 +107,8 @@ export async function fetchWindRose(lat: number, lon: number, signal?: AbortSign
 }
 
 export async function fetchElevation(lat: number, lon: number, signal?: AbortSignal): Promise<number | undefined> {
+  // USGS EPQS answers curl but not browsers (no CORS header on the response), so Open-Meteo's 90 m DEM is used.
   try {
-    const inUS = lat > 17 && lat < 72 && lon > -180 && lon < -64;
-    if (inUS) { const r = await fetch(`https://epqs.nationalmap.gov/v1/json?x=${lon}&y=${lat}&units=Meters`, { signal }); if (r.ok) { const j = await r.json(); if (typeof j.value === 'number') return j.value; } }
     const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`, { signal }); if (r.ok) { const j = await r.json(); return j.elevation?.[0]; }
   } catch { /* offline */ }
   return undefined;
