@@ -44,7 +44,7 @@
     "typescript-eslint": "^8.71.0",
     "vite": "^5.4.21",
     "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^3.2.7"
+    "vitest": "^5.0.2"
   },
   "homepage": "https://phlant.robbiemed.org",
   "repository": {
