@@ -176,3 +176,5 @@ svg text { font-family: var(--sans); }
 .onb .steps { display: flex; gap: 8px; margin-bottom: 14px; }
 .onb .steps i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
 .onb .steps i.on { background: var(--accent); }
+.leaflet-container { z-index: 0; isolation: isolate; font-family: var(--sans); }
+.leaflet-container a { color: #2f6fb0; }
