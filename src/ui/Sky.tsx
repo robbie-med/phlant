@@ -202,7 +202,7 @@ function EclipticRing({ today, noon, m }: { today: string; noon: Date; m: MoonSt
   return (
     <div className="card wide">
       <h2>The ring of the ecliptic <small>{fmtYMD(today)} · Earth at the centre, the Sun's path as the ring: Sun, Moon, planets and both zodiacs</small></h2>
-      <div className="row" style={{ alignItems: 'flex-start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16, alignItems: 'start' }}>
         <svg viewBox="0 0 380 380" width="380" style={{ maxWidth: '100%' }}>
           {TROPICAL_SIGNS.map((sgn, i) => { const [x1, y1] = pt(i * 30, R), [x2, y2] = pt(i * 30 + 30, R), [x3, y3] = pt(i * 30 + 30, R - 16), [x4, y4] = pt(i * 30, R - 16); const [tx, ty] = pt(i * 30 + 15, R - 8); return <g key={sgn}><path d={`M ${x1} ${y1} A ${R} ${R} 0 0 0 ${x2} ${y2} L ${x3} ${y3} A ${R - 16} ${R - 16} 0 0 1 ${x4} ${y4} Z`} fill={ELEMENT_COLOR[SIGN_ELEMENT[sgn]]} opacity={.8} stroke="var(--bg)" /><text x={tx} y={ty + 4} textAnchor="middle" fontSize={11} fill="#0f1a13">{SIGN_GLYPH[sgn]}</text><title>{sgn} (tropical) — {SIGN_ELEMENT[sgn]}</title></g>; })}
           {SIDEREAL_BOUNDS.map(([start, sgn], i) => { const end = SIDEREAL_BOUNDS[(i + 1) % 12][0]; const span = ((end - start) + 360) % 360; const r1 = R - 32, r2 = R - 18; const [x1, y1] = pt(start, r2), [x2, y2] = pt(start + span, r2), [x3, y3] = pt(start + span, r1), [x4, y4] = pt(start, r1); const [tx, ty] = pt(start + span / 2, (r1 + r2) / 2); return <g key={sgn}><path d={`M ${x1} ${y1} A ${r2} ${r2} 0 ${span > 180 ? 1 : 0} 0 ${x2} ${y2} L ${x3} ${y3} A ${r1} ${r1} 0 ${span > 180 ? 1 : 0} 1 ${x4} ${y4} Z`} fill={ELEMENT_COLOR[SIGN_ELEMENT[sgn as keyof typeof SIGN_ELEMENT]]} opacity={.45} stroke="var(--bg)" /><text x={tx} y={ty + 3} textAnchor="middle" fontSize={8} fill="var(--fg)">{SIGN_GLYPH[sgn as keyof typeof SIGN_GLYPH]}</text><title>{sgn} constellation (sidereal)</title></g>; })}
@@ -221,7 +221,7 @@ function EclipticRing({ today, noon, m }: { today: string; noon: Date; m: MoonSt
           <circle cx={cx} cy={cy} r={9} fill="#5aa0d9" /><text x={cx} y={cy + 22} textAnchor="middle" fontSize={9} fill="var(--muted)">Earth</text>
           <text x={cx + R - 60} y={cy - 4} textAnchor="middle" fontSize={8} fill="var(--muted)">0° ♈ →</text>
         </svg>
-        <div style={{ flex: 1, minWidth: 240 }}>
+        <div>
           <p className="sr"><b>Read it like this.</b> Longitude runs anticlockwise from 0° at the spring equinox point (right). The outer ring is the <b>tropical</b> zodiac: twelve equal 30° slices measured from that point — what the Russian calendar and American almanac mean by "Moon in Cancer". The inner ring is where the <b>constellations</b> really are: because Earth's axis wobbles (precession), they have slipped about 24° since the signs were fixed 2 000 years ago. The biodynamic and French calendars read this inner ring. Same Moon, two different answers — that is the biggest single reason the traditions disagree.</p>
           <p className="sr">The Sun ☉ sits where the season says. The Moon is full when it is opposite the Sun, new when beside it. Planets near the Sun are invisible; ℞ marks one moving backwards against the stars (retrograde — a trick of perspective as Earth overtakes it). The dashed amber axis is the nodes, the blue spoke points to perigee.</p>
           <table className="t"><thead><tr><th></th><th>Where</th><th>Visible</th><th>Mag.</th><th>Moon aspect</th></tr></thead><tbody>
@@ -323,7 +323,7 @@ function YearWheel({ year, today }: { year: number; today: string }) {
   return (
     <div className="card wide">
       <h2>The year as the Sun sees it <small>{year} · angle = the Sun's position on its path, so the 24 solar terms are evenly spaced and our months are not</small></h2>
-      <div className="row" style={{ alignItems: 'flex-start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16, alignItems: 'start' }}>
         <svg viewBox="0 0 430 400" width="430" style={{ maxWidth: '100%' }}>
           <circle cx={cx} cy={cy} r={R} fill="none" stroke="var(--line)" />
           <circle cx={cx} cy={cy} r={R - 34} fill="none" stroke="var(--line)" />
@@ -339,7 +339,7 @@ function YearWheel({ year, today }: { year: number; today: string }) {
           <text x={cx} y={cy + 12} textAnchor="middle" fontSize={9} fill="var(--muted)">frost-free {fmtMD(site.lastFrost)} – {fmtMD(site.firstFrost)}</text>
           <text x={cx} y={cy + 26} textAnchor="middle" fontSize={9} fill="var(--gold)">● {fmtYMD(today)}</text>
         </svg>
-        <div style={{ flex: 1, minWidth: 220 }} className="sr">
+        <div className="sr">
           <p><b>Read it like this.</b> The year runs clockwise like a clock face: June at the top, December at the bottom. Each spoke on the outer ring is a 节气/절기 — fifteen degrees of the Sun's path, about fifteen days. The grey ticks are the Gregorian months: they drift against the terms because our calendar is not tied to the Sun's longitude the way the terms are.</p>
           <p>The beads on the inner ring are the new Moons (dark) and full Moons (light). Twelve and a bit lunations fit in a solar year, which is why the Korean and Chinese calendars insert a leap month (윤달/闰月) every two or three years — you can see the extra bead when it happens.</p>
           <p>The green band is your frost-free season at {site.name}. The amber dot is perihelion: Earth is closest to the Sun in early January, so seasons come from tilt, not distance.</p>
