@@ -56,8 +56,8 @@ export default function SiteMap({ lat, lon, onMove, acres, onAcres, inUS }: Prop
   return (
     <div>
       <div className="row" style={{ marginBottom: 8 }}>
-        <label className="f" style={{ minWidth: 220 }}><span>Area around the pin: {acres} acre{acres === 1 ? '' : 's'} ({(acres * 0.4047).toFixed(1)} ha, {Math.round(Math.sqrt(acres * 4046.86))} m square)</span><input type="range" min={0.25} max={20} step={0.25} value={acres} onChange={e => onAcres(+e.target.value)} /></label>
-        <div className="chips">{[0.25, 1, 3, 7, 20].map(a => <button key={a} className={`chip ${acres === a ? 'on' : ''}`} onClick={() => onAcres(a)}>{a} ac</button>)}</div>
+        <label className="f" style={{ minWidth: 260 }}><span>Area around the pin: {acres} acre{acres === 1 ? '' : 's'} ({(acres * 0.4047).toFixed(1)} ha, {Math.round(Math.sqrt(acres * 4046.86))} m square)</span><input type="range" min={0} max={1000} value={Math.round(1000 * Math.log(acres / 0.25) / Math.log(200 / 0.25))} onChange={e => { const a = 0.25 * Math.pow(200 / 0.25, +e.target.value / 1000); onAcres(a < 1 ? +a.toFixed(2) : a < 20 ? +a.toFixed(1) : Math.round(a)); }} /></label>
+        <div className="chips">{[0.25, 1, 7, 20, 40, 80, 160, 200].map(a => <button key={a} className={`chip ${acres === a ? 'on' : ''}`} onClick={() => onAcres(a)}>{a} ac</button>)}</div>
         {inUS && <label className="row" style={{ fontSize: 13 }}><input type="checkbox" checked={showLines} onChange={e => setShowLines(e.target.checked)} />official soil lines (USDA WMS)</label>}
       </div>
       <div ref={ref} style={{ height: 420, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--bg2)' }} />
@@ -70,7 +70,7 @@ export default function SiteMap({ lat, lon, onMove, acres, onAcres, inUS }: Prop
             {soil.polygons.map((p, i) => <tr key={p.mukey}><td><span className="score" style={{ background: PALETTE[i % PALETTE.length] }} /></td><td>{p.name}</td><td><b>{(p.areaShare * 100).toFixed(0)}%</b> ({(p.areaShare * acres).toFixed(2)} ac)</td><td>{p.texture ?? '—'}{p.type ? ` → ${SOIL_INFO[p.type].name.toLowerCase()}` : ''}</td><td>{p.drainage ?? '—'}{p.hydGroup ? ` (group ${p.hydGroup})` : ''}</td><td>{p.capability ?? '—'}</td></tr>)}
           </tbody></table>}
           {soil && soil.polygons.length === 0 && <p className="sr">No SSURGO polygons here (water or unmapped area).</p>}
-          <p className="sr">Capability class 1–2 = prime cropland, 3–4 = workable with care, 5–8 = not suited to tillage. Hydrologic group A drains fast, D is wettest.</p>
+          <p className="sr">Slider is logarithmic: 0.25 acres (a town lot) to 200 acres (a quarter-section minus a bit). Capability class 1–2 = prime cropland, 3–4 = workable with care, 5–8 = not suited to tillage. Hydrologic group A drains fast, D is wettest.</p>
         </div>
       ) : <p className="sr" style={{ marginTop: 8 }}>Outside the US the parcel soil map is not available; the site pack uses ISRIC SoilGrids (250 m) for the pin instead.</p>}
     </div>
