@@ -11,7 +11,8 @@ French Rustica · English cottage lore · Russian лунный календар�
 Nothing here is a lookup table — everything is computed, so it works for 2026 or 2060, Tulsa or Wyoming.
 
 ## Deployed
-https://field.bo-bob.com — `phlant.service` (systemd --user) serves `dist/` on 127.0.0.1:3510 behind the diet-loggers Cloudflare tunnel.
+- https://phlant.robbiemed.org — GitHub Pages, built by `.github/workflows/pages.yml` on every push to `main` (DNS: Cloudflare CNAME → robbie-med.github.io).
+- https://field.bo-bob.com — `phlant.service` (systemd --user) serves `dist/` on 127.0.0.1:3510 behind the diet-loggers Cloudflare tunnel.
 Redeploy: `npm run build` (the service reads dist/ live; no restart needed).
 
 ## Run

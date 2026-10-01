@@ -43,7 +43,7 @@ export default function App() {
   return (
     <div className="shell">
       <aside className="side">
-        <div className="brand"><div className="logo">🌙</div><div><b>Phlant</b><small>moon · traditions · soil</small></div></div>
+        <div className="brand"><div className="logo">🌙</div><div><b>Phlant</b></div></div>
         <nav className="nav">{NAV.map(n => <NavLink key={n.id} n={n} />)}</nav>
         <div className="foot">
           <select value={s.siteId} onChange={e => setState({ siteId: e.target.value })} aria-label="Site">{s.sites.map(x => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
