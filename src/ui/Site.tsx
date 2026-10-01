@@ -7,6 +7,9 @@ import { buildSitePack, deletePack, exportPacks, loadAllPacks, loadPack, savePac
 import { fetchLatest, type Reading } from '../services/water';
 import { fmtMD, Toast } from './common';
 import { WindHeatmap, WindRose, isClimatology } from './WindRose';
+import { parseCoords } from '../services/soil';
+import { Section } from './kit';
+const SiteMap = React.lazy(() => import('./SiteMap'));
 
 const DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 export const degToDir = (d: number) => DIRS[Math.round(((d % 360) + 360) % 360 / 22.5) % 16];
@@ -21,6 +24,10 @@ export default function Site() {
   const [readings, setReadings] = useState<Reading[] | null>(null);
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [coordText, setCoordText] = useState('');
+  const [acres, setAcres] = useState(() => { try { return +(localStorage.getItem('phlant:acres') || 7); } catch { return 7; } });
+  const inUS = site.lat > 17 && site.lat < 72 && site.lon > -180 && site.lon < -64;
+  const applyCoords = () => { const c = parseCoords(coordText); if (!c) return say('Could not read those coordinates. Try "36.15, -95.99" or 36°09\'N 95°59\'W.'); set({ lat: c.lat, lon: c.lon }); setCoordText(''); say(`Pin moved to ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}. Re-download the pack to refresh soil, frost and wind.`); };
   const say = (m: string) => { setToast(m); setTimeout(() => setToast(null), 3500); };
   const refresh = async () => { setPack(await loadPack(site.id)); setPacks(await loadAllPacks()); };
   useEffect(() => { refresh(); setReadings(null); setForecast(null); }, [site.id]);
@@ -76,6 +83,17 @@ export default function Site() {
         {hits.length > 0 && <div className="chips" style={{ marginTop: 8 }}>{hits.map((h, i) => <button key={i} className="chip" onClick={() => addSite(`${h.name}${h.admin1 ? ', ' + h.admin1 : ''}`, h.lat, h.lon, h.tz, h.elevationM)}>{h.name}, {h.admin1} · {h.country} ({h.lat.toFixed(2)}, {h.lon.toFixed(2)})</button>)}</div>}
         <p className="sr" style={{ marginTop: 8 }}>✓ = data downloaded. A site pack holds the soil survey, nearby gauges, ten years of temperature history boiled down to frost dates and zone, prevailing wind and elevation (about 50–200 KB). The sky is computed on-device, so after download the app needs no network. Only live river readings and the 7-day forecast fetch again.</p>
       </div>
+
+      <Section wide title="Where exactly" sub="Click the map, drag the pin, or paste coordinates. The soil survey is drawn for the square around the pin.">
+        <div className="row" style={{ marginBottom: 8 }}>
+          <input placeholder='Paste coordinates: 36.1511, -95.9926  or  36°09′04″N 95°59′33″W' value={coordText} onChange={e => setCoordText(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyCoords()} style={{ maxWidth: 420 }} />
+          <button onClick={applyCoords}>Set pin</button>
+          <span className="sr">Pin: {site.lat.toFixed(5)}, {site.lon.toFixed(5)} · <a href={`https://www.openstreetmap.org/?mlat=${site.lat}&mlon=${site.lon}#map=17/${site.lat}/${site.lon}`} target="_blank" rel="noreferrer">open in OSM</a></span>
+        </div>
+        <React.Suspense fallback={<div className="skeleton" style={{ height: 420 }} />}>
+          <SiteMap lat={site.lat} lon={site.lon} acres={acres} inUS={inUS} onAcres={a => { setAcres(a); try { localStorage.setItem('phlant:acres', String(a)); } catch { /* */ } }} onMove={(la, lo) => set({ lat: la, lon: lo })} />
+        </React.Suspense>
+      </Section>
 
       <div className="card">
         <h2>{site.name} <small>· site settings</small></h2>

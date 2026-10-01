@@ -70,3 +70,83 @@ export async function fetchSoil(lat: number, lon: number, signal?: AbortSignal):
   if (inUS) { try { const r = await fetchSSURGO(lat, lon, signal); if (r && r.components.length) return r; } catch (e) { console.warn('SSURGO failed', e); } }
   return fetchSoilGrids(lat, lon, signal);
 }
+
+/* ---------- soil map polygons for an acreage box around a point ---------- */
+export interface SoilPolygon { mukey: string; name: string; rings: Array<Array<[number, number]>>; /* [lat, lon] rings (outer first) */ areaShare: number; texture?: string; drainage?: string; type?: SoilType; hydGroup?: string; capability?: string; }
+export interface SoilMap { acres: number; bbox: [number, number, number, number]; /* south, west, north, east */ polygons: SoilPolygon[]; fetchedAt: string; }
+
+export function acreBox(lat: number, lon: number, acres: number): [number, number, number, number] {
+  const side = Math.sqrt(acres * 4046.8564);
+  const dLat = side / 2 / 111_320, dLon = side / 2 / (111_320 * Math.cos((lat * Math.PI) / 180));
+  return [lat - dLat, lon - dLon, lat + dLat, lon + dLon];
+}
+
+/** WKT parser for POLYGON / MULTIPOLYGON / GEOMETRYCOLLECTION (lon lat order) → polygons, each a list of [lat, lon] rings (outer first). */
+export function wktToRings(wkt: string): Array<Array<Array<[number, number]>>> {
+  type Node = string | Node[];
+  // tokenise parentheses into a nested structure of coordinate strings
+  const parse = (str: string, i: { p: number }): Node[] => { const out: Node[] = []; let buf = ''; while (i.p < str.length) { const c = str[i.p++]; if (c === '(') { out.push(parse(str, i)); } else if (c === ')') { if (buf.trim()) out.push(buf.trim()); return out; } else buf += c; } if (buf.trim()) out.push(buf.trim()); return out; };
+  const ring = (s: string): Array<[number, number]> => s.split(',').map(pt => { const [x, y] = pt.trim().split(/\s+/).map(Number); return [y, x] as [number, number]; }).filter(p => !isNaN(p[0]) && !isNaN(p[1]));
+  const polys: Array<Array<Array<[number, number]>>> = [];
+  const walk = (node: Node, kind: string) => {
+    if (typeof node === 'string') return;
+    if (kind === 'POLYGON') { const rings = node.filter((r): r is Node[] => Array.isArray(r)).map(r => ring(r[0] as string)).filter(r => r.length >= 3); if (rings.length) polys.push(rings); }
+    else if (kind === 'MULTIPOLYGON') { for (const p of node) if (Array.isArray(p)) walk(p, 'POLYGON'); }
+  };
+  // split top-level geometries (handles GEOMETRYCOLLECTION by scanning keywords)
+  const re = /(MULTIPOLYGON|POLYGON)\s*\(/gi; let m: RegExpExecArray | null;
+  while ((m = re.exec(wkt))) { const i = { p: m.index + m[0].length - 1 }; const node = parse(wkt, { p: i.p + 1 }); walk(node, m[1].toUpperCase()); re.lastIndex = m.index + m[0].length; }
+  return polys;
+}
+
+/** Planar area of a ring in m² (good enough at garden scale). */
+function ringArea(r: Array<[number, number]>, lat0: number): number {
+  const kx = 111_320 * Math.cos((lat0 * Math.PI) / 180), ky = 111_320; let a = 0;
+  for (let i = 0; i < r.length; i++) { const [y1, x1] = r[i], [y2, x2] = r[(i + 1) % r.length]; a += (x1 * kx) * (y2 * ky) - (x2 * kx) * (y1 * ky); }
+  return Math.abs(a) / 2;
+}
+
+/** USDA SSURGO map-unit polygons clipped to an acreage box, with each unit's share and a one-line description. */
+export async function fetchSoilMap(lat: number, lon: number, acres: number, signal?: AbortSignal): Promise<SoilMap> {
+  const [s, w, n, e] = acreBox(lat, lon, acres);
+  const poly = `POLYGON((${w} ${s}, ${e} ${s}, ${e} ${n}, ${w} ${n}, ${w} ${s}))`;
+  const g = `geometry::STGeomFromText('${poly}', 4326)`;
+  const query = `SELECT p.mukey, m.muname, p.mupolygongeo.STIntersection(${g}).STAsText() AS geom FROM mupolygon p INNER JOIN mapunit m ON m.mukey=p.mukey WHERE p.mupolygongeo.STIntersects(${g}) = 1`;
+  const res = await fetch(SDA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format: 'JSON+COLUMNNAME', query }), signal });
+  if (!res.ok) throw new Error(`SDA ${res.status}`);
+  const text = await res.text(); if (text.startsWith('<')) throw new Error('SDA maintenance window — try again in a few minutes');
+  const rows: string[][] = JSON.parse(text).Table ?? [];
+  const byMukey = new Map<string, SoilPolygon>();
+  let total = 0;
+  for (const r of rows.slice(1)) {
+    const [mukey, name, wkt] = r; if (!wkt) continue;
+    const polys = wktToRings(wkt);
+    let rec = byMukey.get(mukey); if (!rec) { rec = { mukey, name, rings: [], areaShare: 0 }; byMukey.set(mukey, rec); }
+    for (const rings of polys) { rec.rings.push(...rings.map((ring, i) => ring)); const a = ringArea(rings[0], lat) - rings.slice(1).reduce((x, h) => x + ringArea(h, lat), 0); rec.areaShare += a; total += a; }
+  }
+  const polygons = [...byMukey.values()].map(p => ({ ...p, areaShare: total ? p.areaShare / total : 0 })).sort((a, b) => b.areaShare - a.areaShare);
+  // attributes: dominant component texture & drainage per mukey
+  if (polygons.length) {
+    const keys = polygons.map(p => `'${p.mukey}'`).join(',');
+    const q2 = `SELECT c.mukey, c.compname, c.comppct_r, c.drainagecl, c.hydgrp, c.nirrcapcl, ch.sandtotal_r, ch.silttotal_r, ch.claytotal_r, ct.texdesc FROM component c LEFT JOIN chorizon ch ON ch.cokey=c.cokey AND ch.hzdept_r=0 LEFT JOIN chtexturegrp ct ON ct.chkey=ch.chkey AND ct.rvindicator='Yes' WHERE c.mukey IN (${keys}) AND c.majcompflag='Yes' ORDER BY c.mukey, c.comppct_r DESC`;
+    try {
+      const r2 = await fetch(SDA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format: 'JSON+COLUMNNAME', query: q2 }), signal });
+      const t2 = await r2.text(); const rows2: string[][] = t2.startsWith('<') ? [] : (JSON.parse(t2).Table ?? []);
+      const seen = new Set<string>();
+      for (const r of rows2.slice(1)) { const [mukey, , , drainage, hyd, cap, sand, silt, clay, tex] = r; if (seen.has(mukey)) continue; seen.add(mukey); const p = polygons.find(x => x.mukey === mukey); if (!p) continue; p.drainage = drainage ?? undefined; p.hydGroup = hyd ?? undefined; p.capability = cap ?? undefined; p.texture = tex ?? undefined; if (sand != null && clay != null) p.type = textureClass(+sand, +(silt ?? 0), +clay); }
+    } catch { /* attributes optional */ }
+  }
+  return { acres, bbox: [s, w, n, e], polygons, fetchedAt: new Date().toISOString() };
+}
+
+/** Parse "36.15, -95.99", "36.15 -95.99", "36°09'00\"N 95°59'24\"W", "36.15N 95.99W". */
+export function parseCoords(text: string): { lat: number; lon: number } | null {
+  const t = text.trim();
+  const dec = t.match(/^(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)$/);
+  if (dec) { const lat = +dec[1], lon = +dec[2]; if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180) return { lat, lon }; }
+  const dms = /(\d+(?:\.\d+)?)[°\s:]+(?:(\d+(?:\.\d+)?)['′\s:]+)?(?:(\d+(?:\.\d+)?)["″\s]*)?\s*([NSEW])/gi;
+  const parts: Array<{ v: number; h: string }> = []; let m: RegExpExecArray | null;
+  while ((m = dms.exec(t))) { const v = +m[1] + (m[2] ? +m[2] / 60 : 0) + (m[3] ? +m[3] / 3600 : 0); parts.push({ v: /[SW]/i.test(m[4]) ? -v : v, h: m[4].toUpperCase() }); }
+  if (parts.length === 2) { const lat = parts.find(p => /[NS]/.test(p.h)), lon = parts.find(p => /[EW]/.test(p.h)); if (lat && lon) return { lat: lat.v, lon: lon.v }; }
+  return null;
+}

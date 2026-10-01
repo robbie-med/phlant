@@ -36,6 +36,8 @@ export interface Settings {
   mode: 'beginner' | 'expert';
   tab: string;
   selectedDate?: string;
+  theme?: 'auto' | 'dark' | 'light';
+  onboarded?: boolean;
 }
 
 export const TULSA: SiteConfig = {
