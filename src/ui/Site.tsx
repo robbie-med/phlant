@@ -67,7 +67,7 @@ export default function Site() {
     <div className="grid">
       <Toast msg={toast} />
       <div className="card wide">
-        <h2>Sites <small>· {s.sites.length} saved · each one keeps its own offline data pack</small></h2>
+        <h2>Sites <small>{s.sites.length} saved · each one keeps its own offline data pack</small></h2>
         <div className="row">
           <div className="chips">{s.sites.map(x => <button key={x.id} className={`chip ${x.id === s.siteId ? 'on' : ''}`} onClick={() => setState({ siteId: x.id })}>{x.name}{packs.some(p => p.siteId === x.id) ? ' ✓' : ''}</button>)}</div>
         </div>
@@ -95,9 +95,9 @@ export default function Site() {
         </React.Suspense>
       </Section>
 
-      <div className="card">
-        <h2>{site.name} <small>· site settings</small></h2>
-        <div className="two">
+      <div className="card wide">
+        <h2>{site.name} <small>site settings — the data pack fills most of these; edit anything you know better</small></h2>
+        <div className="three">
           <F label="Name"><input value={site.name} onChange={e => set({ name: e.target.value })} /></F>
           <F label="Time zone"><input value={site.tz} onChange={e => set({ tz: e.target.value })} /></F>
           <F label="Latitude"><input type="number" step="0.0001" value={site.lat} onChange={e => set({ lat: +e.target.value })} /></F>
@@ -120,7 +120,7 @@ export default function Site() {
       </div>
 
       <div className="card wide">
-        <h2>Offline data pack <small>· {pack ? `built ${new Date(pack.builtAt).toLocaleString()}` : 'not downloaded yet'}</small></h2>
+        <h2>Offline data pack <small>{pack ? `built ${new Date(pack.builtAt).toLocaleString()}` : 'not downloaded yet'}</small></h2>
         {progress && <div><div className="sr">{progress.step}</div><div className="progress"><i style={{ width: `${(progress.done / progress.total) * 100}%` }} /></div></div>}
         <div className="row" style={{ margin: '8px 0' }}>
           <button className="primary" onClick={() => download(site)} disabled={!!progress}>⬇ {pack ? 'Refresh' : 'Download'} data for {site.name}</button>
@@ -129,7 +129,7 @@ export default function Site() {
         {pack?.errors.length ? <ul className="notes" style={{ color: 'var(--warn)' }}>{pack.errors.map((e, i) => <li key={i}>{e}</li>)}</ul> : null}
         {pack?.climate && (
           <div>
-            <h3>Climate <small>· {pack.climate.source}</small></h3>
+            <h3>Climate <small>{pack.climate.source}</small></h3>
             <table className="t"><tbody>
               <tr><th>Hardiness zone</th><td>{pack.climate.hardinessZone} (mean annual low {pack.climate.minTempMeanC} °C)</td></tr>
               <tr><th>Last spring frost (≤ {pack.climate.thresholdC} °C)</th><td>median {fmtMD(pack.climate.lastSpring.median)} · <b>safe date {fmtMD(pack.climate.lastSpring.p90)}</b> (frost-free after it in 9 years of 10, applied as your last frost) · earliest {fmtMD(pack.climate.lastSpring.p10)}</td></tr>
@@ -144,13 +144,13 @@ export default function Site() {
           </div>
         )}
         {pack?.wind && (isClimatology(pack.wind) ? <div>
-          <h3>Wind <small>· {pack.wind.source} · {degToDir(pack.wind.dominantDeg)} year-round, {degToDir(pack.wind.growingSeasonDominantDeg)} in the growing season</small></h3>
+          <h3>Wind <small>{pack.wind.source} · {degToDir(pack.wind.dominantDeg)} year-round, {degToDir(pack.wind.growingSeasonDominantDeg)} in the growing season</small></h3>
           <div className="row" style={{ alignItems: 'flex-start' }}><WindRose wind={pack.wind} size={170} title="all year, north up" /><div style={{ flex: 1, minWidth: 260 }}><WindHeatmap wind={pack.wind} highlightMonth={new Date().getMonth()} /></div></div>
           <p className="sr">Each row is a month, each column a compass direction; darker = more of that month's wind energy from that direction. The Garden page picks the row for the date you are planning.</p>
         </div> : <p className="sr">Prevailing wind: {degToDir(pack.wind.dominantDeg)} year-round, {degToDir(pack.wind.growingSeasonDominantDeg)} in the growing season. Refresh the pack to get the month-by-direction rose.</p>)}
         {pack?.soil && (
           <div>
-            <h3>Soil <small>· {pack.soil.source}</small></h3>
+            <h3>Soil <small>{pack.soil.source}</small></h3>
             <p className="sr">{pack.soil.summary.label}{pack.soil.summary.ph ? ` · pH ${pack.soil.summary.ph}` : ''}{pack.soil.summary.clay != null ? ` · ${pack.soil.summary.sand}% sand / ${pack.soil.summary.silt}% silt / ${pack.soil.summary.clay}% clay` : ''}</p>
             <details><summary>Soil components and horizons ({pack.soil.components.length})</summary>
               {pack.soil.components.map((c, i) => <div key={i} style={{ marginTop: 6 }}><b>{c.name}</b> {c.percent}% of “{c.mapUnit}” {c.drainage ? `· ${c.drainage}` : ''} {c.order ? `· ${c.order}` : ''} {c.slope != null ? `· slope ${c.slope}%` : ''} {c.capability ? `· capability class ${c.capability}` : ''}
@@ -161,7 +161,7 @@ export default function Site() {
         )}
         {pack?.gauges && (
           <div>
-            <h3>Water <small>· {pack.gauges.length} USGS gauges within 25 km</small></h3>
+            <h3>Water <small>{pack.gauges.length} USGS gauges within 25 km</small></h3>
             <div className="row"><button onClick={live}>Fetch live readings</button><button onClick={fc}>7-day forecast + soil temperature</button></div>
             {forecast && <p className="sr">Soil at 6 cm now {forecast.soilTempC?.toFixed(1)} °C · moisture {forecast.soilMoisture?.toFixed(2)} m³/m³ · {forecast.days.map(d => `${d.date.slice(5)}: ${Math.round(d.tmin)}–${Math.round(d.tmax)}° ${d.rain}mm ${degToDir(d.windDir)}`).join(' · ')}</p>}
             <details open={!!readings}><summary>Nearest gauges</summary><table className="t"><tbody>{pack.gauges.slice(0, 12).map(g => <tr key={g.id}><td>{g.name}</td><td>{g.distanceKm.toFixed(1)} km</td><td>{readings?.filter(r => r.gaugeId === g.id).map(r => `${r.label} ${r.value} ${r.unit}`).join(' · ')}</td></tr>)}</tbody></table></details>
@@ -170,7 +170,7 @@ export default function Site() {
       </div>
 
       <div className="card wide">
-        <h2>Traditions to compare <small>· {s.enabled.length} on</small></h2>
+        <h2>Traditions to compare <small>{s.enabled.length} on</small></h2>
         <div className="grid">
           {TRADITIONS.map(t => <label key={t.id} className="task" style={{ cursor: 'pointer' }}><div className="row"><input type="checkbox" style={{ width: 'auto' }} checked={s.enabled.includes(t.id)} onChange={e => setState(st => ({ enabled: e.target.checked ? [...st.enabled, t.id] : st.enabled.filter(x => x !== t.id) }))} /><b>{t.flag} {t.name}</b></div><div className="sr" style={{ marginTop: 4 }}>{t.summary}</div></label>)}
         </div>

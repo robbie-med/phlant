@@ -32,6 +32,13 @@ h1, h2, h3, .display { font-family: var(--display); font-variation-settings: 'op
 h2 { font-size: 20px; margin: 0 0 6px; }
 h3 { font-size: 16px; margin: 0 0 6px; }
 h2 small, h3 small, .muted { color: var(--muted); font-weight: 400; font-family: var(--sans); font-size: 13px; }
+h2 small { display: block; margin-top: 2px; line-height: 1.4; }
+h2 small::before { content: ''; }
+table.t td, table.t th { word-break: normal; overflow-wrap: anywhere; }
+table.t td:first-child { white-space: nowrap; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.toolbar .sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+.panel-tabs { margin: 12px 0 10px; }
 p { margin: 6px 0; }
 button, select, input { font: inherit; color: inherit; }
 button { background: var(--surface2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; cursor: pointer; min-height: 40px; transition: background .15s, border-color .15s, transform .05s; }
@@ -90,7 +97,8 @@ main { padding: 22px 24px 40px; max-width: 1180px; margin: 0 auto; }
 .sheet .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--line2); margin: 0 auto 12px; }
 
 /* ---------- layout helpers ---------- */
-.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.grid.two-col { grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); }
 .wide { grid-column: 1 / -1; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; box-shadow: var(--shadow); }
 .card.flat { box-shadow: none; }
@@ -157,6 +165,8 @@ svg text { font-family: var(--sans); }
 .progress { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
 .progress > i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 760px) { .three { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 480px) { .two { grid-template-columns: 1fr; } }
 .stat { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: var(--r-sm); background: var(--surface2); border: 1px solid var(--line); min-width: 120px; }
 .stat b { font-family: var(--display); font-size: 20px; font-weight: 500; }

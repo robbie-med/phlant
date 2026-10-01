@@ -23,7 +23,7 @@ export default function Tools() {
   return (
     <div className="grid">
       <div className="card">
-        <h2>Season countdown <small>· {site.name}</small></h2>
+        <h2>Season countdown <small>{site.name}</small></h2>
         <div className="big">{toLF > 0 ? `${toLF} days to last frost` : toFF > 0 ? `${toFF} days of season left` : `${-toFF} days since first frost`}</div>
         <p className="sr">Average last spring frost {fmtYMD(lf)} · first autumn frost {fmtYMD(ff)} · {daysBetween(lf, ff)}-day frost-free season. Half the years frost comes later than the average — keep covers handy for two weeks after.</p>
         <p className="sr"><b>Rule of thumb for a last autumn sowing:</b> days to maturity + 14 days "fall factor" must fit before {fmtYMD(ff)}. Today that means crops of ≤ {Math.max(0, toFF - 14)} days.</p>
@@ -46,7 +46,7 @@ export default function Tools() {
         <p className="sr">{perRow} across × {rows} along at {sp.spacingCm} cm. Sow 1.5–2× that many seeds and thin. Height {sp.heightCm} cm — put it on the {site.lat >= 0 ? 'north' : 'south'} side of shorter crops.</p>
       </div>
       <div className="card wide">
-        <h2>Succession planner <small>· picks the best consensus day within ±3 days of each planned sowing</small></h2>
+        <h2>Succession planner <small>picks the best consensus day within ±3 days of each planned sowing</small></h2>
         <div className="row">
           <label className="f"><span>Plant</span><select value={sowPlant} onChange={e => setSowPlant(e.target.value)} style={{ width: 'auto' }}>{PLANTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
           <label className="f"><span>First sowing</span><input type="date" value={sowDate} onChange={e => setSowDate(e.target.value)} style={{ width: 'auto' }} /></label>

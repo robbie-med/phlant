@@ -7,6 +7,7 @@ import { tzOffsetHours, noonAtOffset, addDays, fmtTime } from '../astro/dates';
 import { todayYmd, fmtYMD } from './common';
 import { loadPack, type SitePack } from '../services/sitepack';
 import { WindRose, isClimatology } from './WindRose';
+import { Section, Seg } from './kit';
 
 const Garden3D = React.lazy(() => import('./Garden3D'));
 
@@ -29,6 +30,8 @@ export default function Garden() {
   const [hour, setHour] = useState(14);
   const [showShadows, setShowShadows] = useState(true);
   const [analysisDate, setAnalysisDate] = useState<'today' | 'jun' | 'dec'>('today');
+  const [panel, setPanel] = useState<'selected' | 'sun' | 'wind' | 'advice'>('advice');
+  const [showControls, setShowControls] = useState(false);
   const [pack, setPack] = useState<SitePack | undefined>();
   useEffect(() => { let on = true; loadPack(site.id).then(p => { if (on) setPack(p); }); return () => { on = false; }; }, [site.id]);
   const windClim = isClimatology(pack?.wind) ? pack!.wind as import('../services/climate').WindClimatology : null;
@@ -118,6 +121,7 @@ export default function Garden() {
     return out;
   }, [beds, features, site, W, D, north, sunByBed, analysisYmd, windDeg]);
 
+  useEffect(() => { if (sel) setPanel('selected'); }, [sel?.id]);
   const selected = sel?.type === 'bed' ? beds.find(b => b.id === sel.id) : undefined;
   const selFeature = sel?.type === 'feature' ? features.find(f => f.id === sel.id) : undefined;
   const [nx, ny] = sunDirPlan(0, site.rotationDeg);
@@ -125,27 +129,24 @@ export default function Garden() {
 
   return (
     <div className="grid">
-      <div className="card wide">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Garden plan <small>· {u(W)} × {u(D)} · up = {bearingToDir(site.rotationDeg)} · wind from {bearingToDir(windDeg)}{windClim ? ` in ${fmtYMD(date, { month: 'long' })}` : ''} · {site.name}</small></h2>
-          <div className="row"><button className={view === '2d' ? 'primary' : ''} onClick={() => setView('2d')}>Plan</button><button className={view === '3d' ? 'primary' : ''} onClick={() => setView('3d')}>3D</button></div>
-        </div>
-        <div className="row" style={{ marginTop: 8 }}>
+      <Section wide title="Garden plan" sub={`${u(W)} × ${u(D)} · top of plan faces ${bearingToDir(site.rotationDeg)} · wind from ${bearingToDir(windDeg)}${windClim ? ` in ${fmtYMD(date, { month: 'long' })}` : ''} · sun for ${fmtYMD(date)}`} right={<Seg value={view} options={[['2d', 'Plan'], ['3d', '3D']]} onChange={setView} />}>
+        <div className="toolbar">
           <button className="primary" onClick={() => addBed()}>+ Bed</button>
-          <div className="chips">{(Object.keys(FEATURE_DEFAULTS) as FeatureKind[]).map(k => <button key={k} className="chip" onClick={() => addFeature(k)}>+ {FEATURE_ICON[k]} {FEATURE_DEFAULTS[k].label}</button>)}</div>
-          <select onChange={e => { const t = TEMPLATES[+e.target.value]; if (t) addTemplate(t); e.target.value = ''; }} defaultValue="" style={{ width: 'auto' }}><option value="" disabled>Templates…</option>{TEMPLATES.map((t, i) => <option key={t.name} value={i}>{t.name}</option>)}</select>
-          {sel && <><button onClick={duplicate}>Duplicate</button><button onClick={remove} style={{ color: 'var(--bad)' }}>Delete</button></>}
+          <select onChange={e => { if (e.target.value) addFeature(e.target.value as FeatureKind); e.target.value = ''; }} defaultValue="" style={{ width: 'auto' }} aria-label="Add a shadow caster"><option value="" disabled>+ Shade caster…</option>{(Object.keys(FEATURE_DEFAULTS) as FeatureKind[]).map(k => <option key={k} value={k}>{FEATURE_ICON[k]} {FEATURE_DEFAULTS[k].label}</option>)}</select>
+          <select onChange={e => { const t = TEMPLATES[+e.target.value]; if (t) addTemplate(t); e.target.value = ''; }} defaultValue="" style={{ width: 'auto' }} aria-label="Templates"><option value="" disabled>Templates…</option>{TEMPLATES.map((t, i) => <option key={t.name} value={i}>{t.name}</option>)}</select>
+          <span className="sep" />
+          {sel ? <><button onClick={duplicate}>Duplicate</button><button onClick={remove} style={{ color: 'var(--bad)' }}>Delete</button></> : <span className="sr">Select a bed or caster to edit it</span>}
           <button className="ghost" onClick={doUndo} title="Ctrl+Z">↶ Undo</button>
+          <span className="sep" />
+          <label className="row" style={{ fontSize: 13 }}><input type="checkbox" checked={showShadows} onChange={e => setShowShadows(e.target.checked)} />shadows</label>
+          <button className="ghost" onClick={() => setShowControls(!showControls)}>{showControls ? 'Hide' : 'Sun, orientation & season'} {showControls ? '▴' : '▾'}</button>
         </div>
-        <div className="row" style={{ marginTop: 8 }}>
-          <label className="f" style={{ minWidth: 220 }}><span>Orientation: top of plan points {bearingToDir(site.rotationDeg)} ({site.rotationDeg}°)</span><input type="range" min={0} max={359} value={site.rotationDeg} onChange={e => updateSite(site.id, { rotationDeg: +e.target.value })} /></label>
-          <label className="f" style={{ minWidth: 220 }}><span>Sun at {String(hour).padStart(2, '0')}:00 on {fmtYMD(date)} — {sunNow.altitude > 0 ? `${sunNow.altitude.toFixed(0)}° high, ${bearingToDir(sunNow.azimuth)}` : 'below horizon'}</span><input type="range" min={0} max={23} value={hour} onChange={e => setHour(+e.target.value)} /></label>
-          <label className="f"><span>Preview another season {preview ? <span style={{ color: 'var(--gold)' }}>(previewing {fmtYMD(preview)} — the rest of the app stays on {fmtYMD(s.selectedDate ?? todayYmd(site.tz))})</span> : '(does not change the date in the top bar)'}</span><div className="row">
+        {showControls && <div className="row" style={{ marginTop: 10, gap: 18 }}>
+          <label className="f" style={{ minWidth: 240 }}><span>Top of plan faces {bearingToDir(site.rotationDeg)} ({site.rotationDeg}°)</span><input type="range" min={0} max={359} value={site.rotationDeg} onChange={e => updateSite(site.id, { rotationDeg: +e.target.value })} /></label>
+          <label className="f" style={{ minWidth: 240 }}><span>Hour {String(hour).padStart(2, '0')}:00 — {sunNow.altitude > 0 ? `sun ${sunNow.altitude.toFixed(0)}° high in the ${bearingToDir(sunNow.azimuth)}` : 'sun below horizon'} · rises {sunrise ? fmtTime(sunrise, site.tz) : '—'}, sets {sunset ? fmtTime(sunset, site.tz) : '—'}</span><input type="range" min={0} max={23} value={hour} onChange={e => setHour(+e.target.value)} /></label>
+          <label className="f"><span>Preview another season {preview ? <span style={{ color: 'var(--gold)' }}>(previewing {fmtYMD(preview)}; the top bar stays on {fmtYMD(s.selectedDate ?? todayYmd(site.tz))})</span> : '(leaves the top-bar date alone)'}</span><div className="chips">
             {([['Top-bar date', null], ['Mar 20', `${date.slice(0, 4)}-03-20`], ['Jun 21', `${date.slice(0, 4)}-06-21`], ['Sep 22', `${date.slice(0, 4)}-09-22`], ['Dec 21', `${date.slice(0, 4)}-12-21`]] as Array<[string, string | null]>).map(([l, d]) => <button key={l} className={`chip ${preview === d ? 'on' : ''}`} onClick={() => setPreview(d)}>{l}</button>)}</div></label>
-          <label className="row" style={{ fontSize: 13 }}><input type="checkbox" style={{ width: 'auto' }} checked={showShadows} onChange={e => setShowShadows(e.target.checked)} />shadows</label>
-          <span className="sr">sunrise {sunrise ? fmtTime(sunrise, site.tz) : '—'} · sunset {sunset ? fmtTime(sunset, site.tz) : '—'}</span>
-        </div>
-
+        </div>}
         {view === '2d' ? (
           <svg ref={svgRef} className="garden" viewBox={`0 0 760 ${H}`} style={{ marginTop: 8 }} onPointerMove={move} onPointerUp={up} onPointerLeave={up} onPointerDown={() => setSel(null)}>
             <defs><pattern id="g" width={scale} height={scale} patternUnits="userSpaceOnUse" x={margin * scale} y={margin * scale}><path d={`M ${scale} 0 L 0 0 0 ${scale}`} fill="none" stroke="var(--line)" strokeWidth={.5} /></pattern><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#5aa0d9" /></marker><marker id="arrN" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent2)" /></marker></defs>
@@ -183,13 +184,17 @@ export default function Garden() {
             <Garden3D site={{ ...site, windDeg }} date={date} hour={hour} selectedId={sel?.id ?? null} onSelect={(type, id) => setSel(id ? { type, id } : null)} samples={samples} />
           </Suspense>
         )}
-        <p className="sr">Drag to move, drag the small square to resize. Shadows are cast from the real Sun position for the date and hour above (plan scale, so a 6 m house throws its true shadow). Beds show their sun hours for the analysis date chosen below.</p>
-      </div>
+        <p className="sr">Drag to move, drag the corner square to resize. Shadows come from the real Sun for the chosen date and hour; each bed shows its sun hours.</p>
+      </Section>
 
-      {selected && <BedPanel bed={selected} site={site} sun={sunByBed[selected.id]} onChange={(patch) => { setBeds(beds.map(b => b.id === selected.id ? { ...b, ...patch } : b)); }} onPush={push} date={date} />}
-      {selFeature && (
-        <div className="card">
-          <h2>{FEATURE_ICON[selFeature.kind]} {selFeature.label} <small>· {u(selFeature.w)} × {u(selFeature.h)}</small></h2>
+      <Section wide>
+        <div className="panel-tabs"><Seg value={panel} options={[['selected', sel ? (selected ? `✎ ${selected.label}` : `✎ ${selFeature?.label ?? 'feature'}`) : 'Selected'], ['sun', 'Sun hours'], ['wind', 'Wind'], ['advice', `Advice${findings.filter(f => f.level === 'bad').length ? ` (${findings.filter(f => f.level === 'bad').length})` : ''}`]]} onChange={setPanel} /></div>
+
+      {panel === 'selected' && !sel && <p className="muted">Click a bed or a caster on the plan to edit its size, height, plants and notes.</p>}
+      {panel === 'selected' && selected && <BedPanel bed={selected} site={site} sun={sunByBed[selected.id]} onChange={(patch) => { setBeds(beds.map(b => b.id === selected.id ? { ...b, ...patch } : b)); }} onPush={push} date={date} />}
+      {panel === 'selected' && selFeature && (
+        <div>
+          <h3>{FEATURE_ICON[selFeature.kind]} {selFeature.label} <small>{u(selFeature.w)} × {u(selFeature.h)}</small></h3>
           <div className="two">
             <label className="f"><span>Label</span><input value={selFeature.label ?? ''} onChange={e => setFeatures(features.map(f => f.id === selFeature.id ? { ...f, label: e.target.value } : f))} /></label>
             <label className="f"><span>Kind</span><select value={selFeature.kind} onChange={e => setFeatures(features.map(f => f.id === selFeature.id ? { ...f, kind: e.target.value as FeatureKind } : f))}>{(Object.keys(FEATURE_DEFAULTS) as FeatureKind[]).map(k => <option key={k} value={k}>{FEATURE_DEFAULTS[k].label}</option>)}</select></label>
@@ -200,32 +205,34 @@ export default function Garden() {
         </div>
       )}
 
-      <div className="card">
-        <h2>Wind at {site.name} <small>· {windClim ? `${windClim.source} · plan uses ${fmtYMD(date, { month: 'long' })}'s dominant direction` : 'download the site pack for a real wind rose'}</small></h2>
+      {panel === 'wind' && <div>
+        <h3>Wind at {site.name} <small>{windClim ? `plan uses ${fmtYMD(date, { month: 'long' })}'s dominant direction` : 'download the site pack for a real wind rose'}</small></h3>
         {windClim ? <div className="row" style={{ alignItems: 'flex-start' }}>
           <WindRose wind={windClim} month={planMonth} rotationDeg={site.rotationDeg} title={`${fmtYMD(date, { month: 'long' })} · rotated to the plan`} />
           <WindRose wind={windClim} rotationDeg={site.rotationDeg} size={160} title="all year" />
           <div className="sr" style={{ flex: 1, minWidth: 160 }}>Wedge length = share of the month's wind energy (speed-weighted hours) from that direction. {bearingToDir(windClim.monthlyDominantDeg[planMonth])} dominates in {fmtYMD(date, { month: 'long' })} at {windClim.monthlyMeanSpeed[planMonth]} km/h mean, calm {(windClim.monthlyCalm[planMonth] * 100).toFixed(0)}% of hours. {windClim.monthlyDominantDeg[planMonth] !== windClim.dominantDeg ? `Year-round the dominant wind is ${bearingToDir(windClim.dominantDeg)} — the seasons swing it.` : ''} Put windbreaks and tall tender crops with this in mind; the full month-by-direction heatmap is on the Site page.</div>
         </div> : <p className="sr">Using the manual setting ({bearingToDir(site.windDeg)}). On the Site page, download the data pack to replace it with three years of hourly measurements.</p>}
-      </div>
-      <div className="card">
-        <h2>Sun hours per bed <small>· computed from the real solar path and your casters</small></h2>
+        {windClim && <p className="sr">Source: {windClim.source}.</p>}
+      </div>}
+      {panel === 'sun' && <div>
+        <h3>Sun hours per bed <small>from the real solar path and your casters</small></h3>
         <div className="chips" style={{ marginBottom: 8 }}>{([['today', fmtYMD(date)], ['jun', 'Jun 21 (longest day)'], ['dec', 'Dec 21 (shortest)']] as const).map(([k, l]) => <button key={k} className={`chip ${analysisDate === k ? 'on' : ''}`} onClick={() => setAnalysisDate(k)}>{l}</button>)}</div>
-        {beds.length ? <table className="t"><thead><tr><th>Bed</th><th>Sun</th><th>of {samples.length ? (samples.length * 15 / 60).toFixed(1) : '0'} h</th><th>Morning / afternoon</th><th>Shaded by</th></tr></thead><tbody>
+        {beds.length ? <div className="tscroll"><table className="t"><thead><tr><th>Bed</th><th>Sun</th><th>of {samples.length ? (samples.length * 15 / 60).toFixed(1) : '0'} h</th><th>Morning / afternoon</th><th>Shaded by</th></tr></thead><tbody>
           {beds.map(b => { const su = sunByBed[b.id]; return <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => setSel({ type: 'bed', id: b.id })}><td>{b.label}</td><td><b style={{ color: su.sunHours >= 6 ? 'var(--good)' : su.sunHours >= 4 ? 'var(--warn)' : 'var(--bad)' }}>{su.sunHours} h</b></td><td><div className="bar" style={{ width: 90 }}><i style={{ left: 0, width: `${su.fraction * 100}%`, background: su.sunHours >= 6 ? 'var(--good)' : su.sunHours >= 4 ? 'var(--warn)' : 'var(--bad)' }} /></div></td><td>{Math.round(su.morningFrac * 100)}% / {Math.round(su.afternoonFrac * 100)}%</td><td>{Object.entries(su.shadedBy).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${nameOf(k)} ${v} h`).join(', ') || '—'}</td></tr>; })}
-        </tbody></table> : <p className="sr">No beds yet.</p>}
+        </tbody></table></div> : <p className="sr">No beds yet.</p>}
         <p className="sr">Full-sun crops want 6+ hours; 4–6 suits leaf and root crops; under 4 is a shade bed. Tall crops in a bed count as casters for the beds beside them.</p>
-      </div>
+      </div>}
 
-      <div className="card">
-        <h2>Layout advice <small>· sun, companions, wind, soil, slope</small></h2>
+      {panel === 'advice' && <div>
+        <h3>Layout advice <small>sun, companions, wind, soil, slope</small></h3>
         <ul className="notes">{findings.map((f, i) => <li key={i}><span className={`chip ${f.level === 'bad' ? 'bad' : f.level === 'good' ? 'good' : ''}`}>{f.level === 'bad' ? '✗' : f.level === 'good' ? '✓' : '!'}</span> {f.text}</li>)}</ul>
         <div className="row" style={{ marginTop: 8 }}>
           <button onClick={() => { const blob = new Blob([JSON.stringify({ phlantPlan: 1, site: site.name, widthM: W, depthM: D, rotationDeg: site.rotationDeg, beds, features }, null, 1)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `phlant-plan-${site.name.replace(/\W+/g, '_')}.json`; a.click(); }}>Export plan</button>
           <label className="chip" style={{ cursor: 'pointer' }}>Import plan<input type="file" accept="application/json" style={{ display: 'none' }} onChange={async e => { const f = e.target.files?.[0]; if (!f) return; try { const j = JSON.parse(await f.text()); if (j.phlantPlan !== 1) throw 0; push(); updateSite(site.id, { beds: j.beds, features: j.features ?? [], rotationDeg: j.rotationDeg ?? 0, widthM: j.widthM ?? W, depthM: j.depthM ?? D }); } catch { alert('Not a Phlant plan file.'); } }} /></label>
           <button onClick={() => window.print()}>Print</button>
         </div>
-      </div>
+      </div>}
+      </Section>
     </div>
   );
 }
@@ -237,8 +244,8 @@ function BedPanel({ bed, site, sun, onChange, onPush, date }: { bed: Bed; site: 
   const list = PLANTS.filter(p => !q || `${p.name} ${p.ko ?? ''} ${p.zh ?? ''}`.toLowerCase().includes(q.toLowerCase()));
   const count = (id: string) => { const p = PLANT_BY_ID[id]; const share = 1 / Math.max(1, bed.plants.length); return Math.max(1, Math.floor(bed.w * 100 / p.spacingCm) * Math.floor(bed.h * 100 / p.spacingCm) * share); };
   return (
-    <div className="card">
-      <h2>{bed.label} <small>· {u(bed.w)} × {u(bed.h)} · {(bed.w * bed.h).toFixed(1)} m²{sun ? ` · ☀ ${sun.sunHours} h` : ''}</small></h2>
+    <div>
+      <h3>{bed.label} <small>{u(bed.w)} × {u(bed.h)} · {(bed.w * bed.h).toFixed(1)} m²{sun ? ` · ☀ ${sun.sunHours} h` : ''}</small></h3>
       <div className="two">
         <label className="f"><span>Label</span><input value={bed.label} onChange={e => onChange({ label: e.target.value })} /></label>
         <label className="f"><span>Raised height (cm)</span><input type="number" step="5" value={bed.heightCm ?? 0} onChange={e => onChange({ heightCm: +e.target.value })} /></label>

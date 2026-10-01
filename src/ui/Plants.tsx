@@ -36,7 +36,7 @@ export default function Plants() {
   return (
     <div className="grid">
       <div className="card wide">
-        <h2>Plants <small>· {PLANTS.length} crops · windows computed from {site.name}'s frost dates</small></h2>
+        <h2>Plants <small>{PLANTS.length} crops · windows computed from {site.name}'s frost dates</small></h2>
         <div className="row">
           <input placeholder="Search name, 한국어, 中文, family…" value={q} onChange={e => setQ(e.target.value)} style={{ maxWidth: 300 }} />
           <div className="chips">{(['all', 'leaf', 'root', 'fruit', 'flower'] as const).map(x => <button key={x} className={`chip ${part === x ? 'on' : ''}`} onClick={() => setPart(x)}>{x === 'all' ? 'all' : `${PART_ICON[x]} ${x}`}</button>)}</div>
@@ -86,7 +86,7 @@ function PlantDetail({ p, today, onClose }: { p: Plant; today: string; onClose: 
       </svg>
       <div className="grid">
         <div>
-          <h3>Best days in the next 45 <small>· consensus of {s.enabled.length} traditions for {p.part} crops, inside the sowing window</small></h3>
+          <h3>Best days in the next 45 <small>consensus of {s.enabled.length} traditions for {p.part} crops, inside the sowing window</small></h3>
           {top.length ? <div className="chips">{top.map(b => <button key={b.ymd} className="chip" style={{ borderColor: scoreColor(b.v) }} onClick={() => setState({ selectedDate: b.ymd, tab: 'today' })}>{fmtYMD(b.ymd)} · {b.v.toFixed(1)}</button>)}</div> : <p className="sr">No sowing window for {p.name} in the next 45 days at {site.name}. Windows: {ws.map(w => `${w.label} ${fmtYMD(w.start, { month: 'short', day: 'numeric' })}–${fmtYMD(w.end, { month: 'short', day: 'numeric' })}`).join('; ')}.</p>}
           <svg viewBox="0 0 450 40" width="100%" style={{ marginTop: 6 }}>{best.map((b, i) => <rect key={b.ymd} x={i * 10} y={b.inWindow ? 4 : 14} width={9} height={b.inWindow ? 30 : 12} fill={scoreColor(b.v)} opacity={b.inWindow ? 1 : .35} onClick={() => setState({ selectedDate: b.ymd, tab: 'today' })} style={{ cursor: 'pointer' }}><title>{b.ymd}: {b.v.toFixed(1)}</title></rect>)}</svg>
           <h3 style={{ marginTop: 10 }}>Growing</h3>

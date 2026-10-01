@@ -19,7 +19,7 @@ export default function Sky() {
   return (
     <div className="grid">
       <div className="card wide">
-        <h2>The Moon has five clocks <small>· every planting tradition reads one or two of them. Today is marked on each.</small></h2>
+        <h2>The Moon's five clocks <small>Every planting tradition reads one or two of them. The selected day is marked on each.</small></h2>
         <p className="sr">The Moon circles Earth once every 27.3 days, but the Sun has moved on in that time, so the Moon needs 29.5 days to get back to the same phase. That gap between the two months is the root of every lunar calendar puzzle. Earth's tilt, the Moon's slightly tilted and oval orbit each add a rhythm of their own.</p>
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))' }}>
           <PhaseClock m={m} north={site.lat >= 0} />
@@ -201,7 +201,7 @@ function EclipticRing({ today, noon, m }: { today: string; noon: Date; m: MoonSt
   const selP = data.planets.find(p => p.name === sel);
   return (
     <div className="card wide">
-      <h2>The ring of the ecliptic today <small>· {fmtYMD(today)} · Earth at the centre, the Sun's path as the ring; everything that matters to the traditions sits on it</small></h2>
+      <h2>The ring of the ecliptic <small>{fmtYMD(today)} · Earth at the centre, the Sun's path as the ring: Sun, Moon, planets and both zodiacs</small></h2>
       <div className="row" style={{ alignItems: 'flex-start' }}>
         <svg viewBox="0 0 380 380" width="380" style={{ maxWidth: '100%' }}>
           {TROPICAL_SIGNS.map((sgn, i) => { const [x1, y1] = pt(i * 30, R), [x2, y2] = pt(i * 30 + 30, R), [x3, y3] = pt(i * 30 + 30, R - 16), [x4, y4] = pt(i * 30, R - 16); const [tx, ty] = pt(i * 30 + 15, R - 8); return <g key={sgn}><path d={`M ${x1} ${y1} A ${R} ${R} 0 0 0 ${x2} ${y2} L ${x3} ${y3} A ${R - 16} ${R - 16} 0 0 1 ${x4} ${y4} Z`} fill={ELEMENT_COLOR[SIGN_ELEMENT[sgn]]} opacity={.8} stroke="var(--bg)" /><text x={tx} y={ty + 4} textAnchor="middle" fontSize={11} fill="#0f1a13">{SIGN_GLYPH[sgn]}</text><title>{sgn} (tropical) — {SIGN_ELEMENT[sgn]}</title></g>; })}
@@ -255,7 +255,7 @@ function MonthStrip({ month, setMonth, today }: { month: string; setMonth: (m: s
   return (
     <div className="card wide">
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0 }}>All five clocks, one month <small>· click a day to open it</small></h2>
+        <h2 style={{ margin: 0 }}>All five clocks, one month <small>click a day to open it</small></h2>
         <div className="row"><button onClick={() => shift(-1)}>‹</button><b>{new Date(Date.UTC(y, mo - 1, 1)).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' })}</b><button onClick={() => shift(1)}>›</button></div>
       </div>
       <svg viewBox={`0 0 ${W} 420`} width="100%" style={{ marginTop: 8 }}>
@@ -322,7 +322,7 @@ function YearWheel({ year, today }: { year: number; today: string }) {
   const arc = (a: number, b: number, r: number) => { const [x1, y1] = pt(a, r), [x2, y2] = pt(b, r); const large = ((b - a + 360) % 360) > 180 ? 1 : 0; return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`; };
   return (
     <div className="card wide">
-      <h2>The year as the Sun sees it <small>· {year} · angle = Sun's ecliptic longitude, so the 24 solar terms are evenly spaced and the calendar months are not</small></h2>
+      <h2>The year as the Sun sees it <small>{year} · angle = the Sun's position on its path, so the 24 solar terms are evenly spaced and our months are not</small></h2>
       <div className="row" style={{ alignItems: 'flex-start' }}>
         <svg viewBox="0 0 430 400" width="430" style={{ maxWidth: '100%' }}>
           <circle cx={cx} cy={cy} r={R} fill="none" stroke="var(--line)" />
@@ -366,7 +366,7 @@ function PatternGrid() {
   const fulls = useMemo(() => mode === 'phase' ? cells.filter((c, i) => c.v > 0.98 && (i === 0 || cells[i - 1].y !== c.y || cells[i - 1].v <= c.v) && (i === cells.length - 1 || cells[i + 1].y !== c.y || cells[i + 1].v < c.v)) : [], [cells, mode]);
   return (
     <div className="card wide">
-      <h2>Patterns across {years} years <small>· one row per year, one column per day of the year · click any day</small></h2>
+      <h2>Patterns across {years} years <small>one row per year, one column per day of the year · click any day</small></h2>
       <div className="row"><button onClick={() => setStart(start - 10)}>‹ 10 yrs</button><span>{start}–{start + years - 1}</span><button onClick={() => setStart(start + 10)}>10 yrs ›</button>
         <div className="chips">{(['phase', 'distance', 'declination'] as const).map(mm => <button key={mm} className={`chip ${mode === mm ? 'on' : ''}`} onClick={() => setMode(mm)}>{mm}</button>)}</div></div>
       <div style={{ overflowX: 'auto', marginTop: 8 }}>
