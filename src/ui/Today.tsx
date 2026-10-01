@@ -7,6 +7,46 @@ import { SIGN_GLYPH, nextQuarters, moonRiseSet } from '../astro/moon';
 import { fmtTime, addDays, midnightAtOffset, tzOffsetHours, noonAtOffset, fmtDateTime } from '../astro/dates';
 import * as A from 'astronomy-engine';
 import { PLANTS } from '../data/plants';
+import { fetchForecast, type Forecast } from '../services/climate';
+import { windows } from './Plants';
+
+function useForecast(siteId: string, lat: number, lon: number) {
+  const key = `phlant:forecast:${siteId}`;
+  const [fc, setFc] = React.useState<{ f: Forecast; stale: boolean } | null>(() => { try { const j = JSON.parse(localStorage.getItem(key) || 'null'); return j ? { f: j, stale: Date.now() - new Date(j.fetchedAt).getTime() > 3 * 3_600_000 } : null; } catch { return null; } });
+  const [err, setErr] = React.useState(false);
+  React.useEffect(() => {
+    if (fc && !fc.stale) return;
+    const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 15000);
+    fetchForecast(lat, lon, ac.signal).then(f => { try { localStorage.setItem(key, JSON.stringify(f)); } catch { /* quota */ } setFc({ f, stale: false }); setErr(false); }).catch(() => setErr(true)).finally(() => clearTimeout(t));
+    return () => { clearTimeout(t); ac.abort(); };
+  }, [siteId, lat, lon]);
+  return { fc, err };
+}
+
+function WeatherStrip() {
+  const site = useSite();
+  const { fc, err } = useForecast(site.id, site.lat, site.lon);
+  if (!fc) return <div className="card wide"><h2>Weather at {site.name} <small>· Open-Meteo</small></h2><p className="sr">{err ? 'Offline — no forecast available. Everything else on this page works without a connection.' : 'Loading forecast…'}</p></div>;
+  const f = fc.f; const days = f.days; const tonight = days[0]; const low3 = Math.min(...days.slice(0, 3).map(d => d.tmin)); const rain3 = days.slice(0, 3).reduce((a, d) => a + d.rain, 0);
+  const soilT = f.soilTempC; const year = new Date().getUTCFullYear(); const today = todayYmd(site.tz);
+  const inWindow = PLANTS.filter(p => windows(p, year, site.lastFrost, site.firstFrost).some(w => w.kind !== 'indoor' && today >= addDays(w.start, -7) && today <= addDays(w.end, 7)));
+  const ready = soilT != null ? inWindow.filter(p => soilT >= p.minSoilC) : []; const notYet = soilT != null ? inWindow.filter(p => soilT < p.minSoilC) : [];
+  const warn: string[] = [];
+  if (low3 <= 2) warn.push(`Frost risk: low of ${low3.toFixed(0)} °C in the next three nights — cover tender crops, bring in seedlings.`);
+  if (tonight.tmin <= 0) warn.push(`Hard freeze tonight (${tonight.tmin.toFixed(0)} °C).`);
+  if (rain3 >= 25) warn.push(`${rain3.toFixed(0)} mm of rain in three days — don't work or sow wet ${site.soil}; it compacts.`);
+  if (rain3 < 2 && days[0].tmax >= 30) warn.push('Hot and dry: water deeply at dawn; the traditions all agree on that one.');
+  if (days.some(d => d.windMax >= 45)) warn.push(`Strong wind (${Math.max(...days.map(d => d.windMax)).toFixed(0)} km/h) coming — stake tall crops, hold off transplanting.`);
+  const dir = (d: number) => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(d / 45) % 8];
+  return (
+    <div className="card wide">
+      <h2>Weather at {site.name} <small>· Open-Meteo{fc.stale ? ` · cached ${Math.round((Date.now() - new Date(f.fetchedAt).getTime()) / 3_600_000)} h ago` : ''} · soil at 6 cm {soilT?.toFixed(1)} °C{f.soilMoisture != null ? ` · moisture ${(f.soilMoisture * 100).toFixed(0)} %` : ''}</small></h2>
+      {warn.map((w, i) => <div key={i} className="tip" style={{ borderColor: 'var(--warn)' }}>{w}</div>)}
+      <div className="chips">{days.map(d => <span key={d.date} className="chip" title={`wind ${dir(d.windDir)} ${d.windMax} km/h`}>{fmtYMD(d.date, { weekday: 'short' })} {Math.round(d.tmin)}–{Math.round(d.tmax)}°{d.rain >= 1 ? ` 🌧${d.rain.toFixed(0)}` : ''}{d.tmin <= 2 ? ' ❄' : ''}</span>)}</div>
+      {soilT != null && <p className="sr" style={{ marginTop: 8 }}><b>Soil {soilT.toFixed(0)} °C:</b> will germinate now — {ready.length ? ready.map(p => p.name).join(', ') : 'nothing in window'}.{notYet.length ? ` Too cold yet: ${notYet.map(p => `${p.name} (${p.minSoilC}°)`).join(', ')}.` : ''}</p>}
+    </div>
+  );
+}
 
 export default function Today() {
   const s = useSettings();
@@ -70,6 +110,7 @@ export default function Today() {
         </div>
       </div>
 
+      <WeatherStrip />
       <div className="card wide">
         <h2>What the traditions agree on <small>({results.length} traditions · {beginner ? 'plain language' : 'all rules'})</small></h2>
         {beginner && (

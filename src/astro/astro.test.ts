@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { sexagenaryDay } from './sexagenary';
 import { easter, jdn } from './dates';
-import { moonState, lunarDay } from './moon';
+import { moonState, lunarDay, SIDEREAL_BOUNDS, signIngresses, tropicalSign } from './moon';
 import { lunisolarDate } from './lunisolar';
 import { currentSolarTerm, solarTermDate } from './solarterms';
 import * as A from 'astronomy-engine';
@@ -50,5 +50,26 @@ describe('lunisolar', () => {
   it('lunar year rolls: 2026-01-10 is still lunar 2025 (month 11)', () => {
     const d = lunisolarDate('2026-01-10', 9);
     expect(d.year).toBe(2025); expect(d.month).toBe(11);
+  });
+});
+
+describe('zodiac boundaries are the IAU ones', () => {
+  it('SIDEREAL_BOUNDS matches constellation changes along the J2000 ecliptic to 0.02°', () => {
+    const r = Math.PI / 180, eps = 23.4392911 * r;
+    const constAt = (lon: number) => { const l = lon * r; const x = Math.cos(l), y = Math.sin(l) * Math.cos(eps), z = Math.sin(l) * Math.sin(eps); return A.Constellation((((Math.atan2(y, x) / r / 15) % 24) + 24) % 24, Math.asin(z) / r).symbol; };
+    const found: number[] = []; let prev = constAt(0);
+    for (let i = 1; i <= 36000; i++) { const c = constAt(i / 100); if (c !== prev) { if (c !== 'Oph' && prev !== 'Oph') found.push(i / 100); else if (c === 'Oph') { /* Sco→Oph: not a boundary we keep */ } else found.push(i / 100); prev = c; } }
+    // found: all boundaries except Sco→Oph (12 values)
+    expect(found.length).toBe(12);
+    const ours = SIDEREAL_BOUNDS.map(b => b[0]).sort((a, b) => a - b);
+    for (let i = 0; i < 12; i++) expect(Math.abs(ours[i] - found[i])).toBeLessThan(0.02);
+  });
+  it('tropical sign is a pure 30° slice of the Moon\'s longitude of date', () => {
+    expect(tropicalSign(0)).toBe('Aries'); expect(tropicalSign(29.99)).toBe('Aries'); expect(tropicalSign(30)).toBe('Taurus'); expect(tropicalSign(359.9)).toBe('Pisces');
+  });
+  it('ingress search finds ~13 tropical sign changes a month, each exactly on a 30° boundary', () => {
+    const ing = signIngresses(new Date('2026-10-01T00:00:00Z'), new Date('2026-11-01T00:00:00Z')).filter(i => i.kind === 'tropical');
+    expect(ing.length).toBeGreaterThanOrEqual(12); expect(ing.length).toBeLessThanOrEqual(14);
+    for (const i of ing) { const lon = A.Ecliptic(A.GeoVector(A.Body.Moon, i.time, true)).elon; expect(Math.abs(((lon % 30) + 30) % 30 - 0) < 0.02 || Math.abs(((lon % 30) + 30) % 30 - 30) < 0.02).toBe(true); }
   });
 });

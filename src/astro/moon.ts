@@ -12,22 +12,51 @@ export const SIGN_ELEMENT: Record<Sign, Element> = {
 export const ELEMENT_PART: Record<Element, 'root' | 'leaf' | 'flower' | 'fruit'> = { earth: 'root', water: 'leaf', air: 'flower', fire: 'fruit' };
 
 /**
- * IAU constellation boundaries along the ecliptic (J2000 longitudes), the unequal
- * "sidereal constellations" that biodynamic (Thun) and French Rustica calendars use.
- * Ophiuchus (247.7°–266.6°) is folded into Scorpio as those calendars do.
+ * Where the official IAU constellation boundaries cross the ecliptic (J2000 longitudes, to 0.01°),
+ * derived from astronomy-engine's Constellation() boundary tables (see astro.test.ts, which re-derives them).
+ * These are the unequal "sidereal constellations" that biodynamic (Thun) and French Rustica calendars use.
+ * Ophiuchus (247.64°–266.24°) is folded into Scorpio as those calendars do.
  */
-const SIDEREAL_BOUNDS: Array<[number, Sign]> = [
-  [29.1, 'Aries'], [53.5, 'Taurus'], [90.4, 'Gemini'], [118.3, 'Cancer'], [138.2, 'Leo'],
-  [174.2, 'Virgo'], [217.8, 'Libra'], [241.1, 'Scorpio'], [266.6, 'Sagittarius'],
-  [299.7, 'Capricorn'], [327.9, 'Aquarius'], [351.6, 'Pisces']
+export const SIDEREAL_BOUNDS: Array<[number, Sign]> = [
+  [28.69, 'Aries'], [53.42, 'Taurus'], [90.15, 'Gemini'], [117.99, 'Cancer'], [138.04, 'Leo'],
+  [173.86, 'Virgo'], [217.82, 'Libra'], [241.05, 'Scorpio'], [266.24, 'Sagittarius'],
+  [299.66, 'Capricorn'], [327.49, 'Aquarius'], [351.66, 'Pisces']
 ];
+
+/** Precession-corrected (J2000) ecliptic longitude of the Moon for comparing with SIDEREAL_BOUNDS. */
+export function siderealLon(lonOfDate: number, date: Date): number {
+  const years = (date.getTime() - Date.UTC(2000, 0, 1, 12)) / (365.25 * 86_400_000);
+  return ((lonOfDate - years * 0.013969) % 360 + 360) % 360;
+}
+
+export interface Ingress { time: Date; kind: 'tropical' | 'sidereal'; from: Sign; to: Sign; }
+
+/** Exact instants (to ~1 min) when the Moon changes tropical sign or sidereal constellation between two dates. */
+export function signIngresses(start: Date, end: Date): Ingress[] {
+  const out: Ingress[] = [];
+  const stateAt = (d: Date) => { const e = A.Ecliptic(A.GeoVector(A.Body.Moon, d, true)); return { trop: tropicalSign(e.elon), sid: siderealConstellation(e.elon, d) }; };
+  const step = 3 * 3_600_000;
+  let t = start.getTime(), prev = stateAt(start);
+  while (t < end.getTime()) {
+    const t2 = Math.min(t + step, end.getTime());
+    const cur = stateAt(new Date(t2));
+    for (const kind of ['tropical', 'sidereal'] as const) {
+      const key = kind === 'tropical' ? 'trop' : 'sid';
+      if (cur[key] !== prev[key]) {
+        let lo = t, hi = t2;
+        while (hi - lo > 30_000) { const mid = (lo + hi) / 2; if (stateAt(new Date(mid))[key] === prev[key]) lo = mid; else hi = mid; }
+        out.push({ time: new Date(hi), kind, from: prev[key], to: cur[key] });
+      }
+    }
+    prev = cur; t = t2;
+  }
+  return out.sort((a, b) => a.time.getTime() - b.time.getTime());
+}
 
 export function tropicalSign(lon: number): Sign { return TROPICAL_SIGNS[Math.floor((((lon % 360) + 360) % 360) / 30)]; }
 
 export function siderealConstellation(lonOfDate: number, date: Date): Sign {
-  // Precession since J2000 ≈ 50.29″/yr: remove it to compare with J2000 boundaries.
-  const years = (date.getTime() - Date.UTC(2000, 0, 1, 12)) / (365.25 * 86_400_000);
-  const lon = ((lonOfDate - years * 0.013969) % 360 + 360) % 360;
+  const lon = siderealLon(lonOfDate, date);
   let sign: Sign = 'Pisces';
   for (const [start, s] of SIDEREAL_BOUNDS) if (lon >= start) sign = s;
   return sign;
