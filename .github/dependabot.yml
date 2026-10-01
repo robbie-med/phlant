@@ -4,10 +4,14 @@ updates:
     directory: /
     schedule: { interval: weekly }
     groups:
-      minor-and-patch: { update-types: [minor, patch] }
+      minor-and-patch:
+        update-types: [minor, patch]
     ignore:
-      - dependency-name: vite
+      # Majors are reviewed by hand (vite/vitest/eslint/typescript majors need coordinated upgrades).
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
+    groups:
+      actions: { patterns: ["*"] }
