@@ -24,7 +24,7 @@ export const french: Tradition = {
       addAll(d, [...SOW_ALL, 'transplant', 'graft', 'prune'], -2, d.blocked);
     }
     add(d, PART_TASK[part], 2, `Lune en ${m.sidereal} ${SIGN_GLYPH[m.sidereal]} → ${JOUR[part]}`);
-    for (const t of SOW_ALL) if (t !== PART_TASK[part]) add(d, t, -1, `${JOUR[part]}: other parts are not the day\'s focus`);
+    for (const t of SOW_ALL) if (t !== PART_TASK[part]) add(d, t, -1, `${JOUR[part]}: other parts are not the day's focus`);
     if (montante) {
       addAll(d, SOW_ALL, 1, 'Lune montante: semer — la sève monte, germination favoured');
       add(d, 'graft', 2, 'Lune montante: greffer, récolter les fruits et légumes-feuilles');

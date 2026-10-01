@@ -39,7 +39,6 @@ export interface FrostStats {
   hottestWeekMaxC: number;
 }
 
-function md(s: string) { return s.slice(5); }
 function quantile(vals: number[], q: number) { const s = [...vals].sort((a, b) => a - b); if (!s.length) return NaN; const i = (s.length - 1) * q; const lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
 function doyToMD(doy: number, y = 2001) { return new Date(Date.UTC(y, 0, Math.round(doy))).toISOString().slice(5, 10); }
 function zoneFromMin(c: number) { const f = c * 9 / 5 + 32; const z = Math.floor((f + 60) / 10) + 1; const half = ((f + 60) % 10) < 5 ? 'a' : 'b'; return `${Math.max(1, Math.min(13, z))}${half}`; }

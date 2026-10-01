@@ -1,0 +1,18 @@
+name: Tradition rule correction
+description: A rule, date or proverb in one of the planting traditions is wrong or missing
+labels: [tradition]
+body:
+  - type: dropdown
+    id: tradition
+    attributes:
+      label: Tradition
+      options: [Korean 농사력, Chinese 农历/通书, Biodynamic (Thun), French (Rustica), English cottage lore, Russian лунный календарь, American almanac / the Signs, Other / new tradition]
+    validations: { required: true }
+  - type: textarea
+    id: rule
+    attributes: { label: The rule as it should be, description: "What the tradition actually says. Quote it if you can." }
+    validations: { required: true }
+  - type: input
+    id: source
+    attributes: { label: Source, description: "Book, almanac, website, or the elder who taught you. Every rule in the app cites its source." }
+    validations: { required: true }

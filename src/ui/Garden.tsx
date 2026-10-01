@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { updateSite, useSite, useSettings, setState, type Bed, type Feature, type FeatureKind, FEATURE_DEFAULTS, type SiteConfig } from '../state/store';
+import { updateSite, useSite, useSettings, type Bed, type Feature, type FeatureKind, FEATURE_DEFAULTS, type SiteConfig } from '../state/store';
 import { PLANTS, PLANT_BY_ID } from '../data/plants';
 import { relation } from '../data/companions';
 import { sunSamples, bedSunHours, sunDirPlan, bearingToDir, sunAt, type Box } from '../garden/sun';
@@ -191,7 +191,7 @@ export default function Garden() {
         <div className="panel-tabs"><Seg value={panel} options={[['selected', sel ? (selected ? `✎ ${selected.label}` : `✎ ${selFeature?.label ?? 'feature'}`) : 'Selected'], ['sun', 'Sun hours'], ['wind', 'Wind'], ['advice', `Advice${findings.filter(f => f.level === 'bad').length ? ` (${findings.filter(f => f.level === 'bad').length})` : ''}`]]} onChange={setPanel} /></div>
 
       {panel === 'selected' && !sel && <p className="muted">Click a bed or a caster on the plan to edit its size, height, plants and notes.</p>}
-      {panel === 'selected' && selected && <BedPanel bed={selected} site={site} sun={sunByBed[selected.id]} onChange={(patch) => { setBeds(beds.map(b => b.id === selected.id ? { ...b, ...patch } : b)); }} onPush={push} date={date} />}
+      {panel === 'selected' && selected && <BedPanel bed={selected} site={site} sun={sunByBed[selected.id]} onChange={(patch) => { setBeds(beds.map(b => b.id === selected.id ? { ...b, ...patch } : b)); }} onPush={push} />}
       {panel === 'selected' && selFeature && (
         <div>
           <h3>{FEATURE_ICON[selFeature.kind]} {selFeature.label} <small>{u(selFeature.w)} × {u(selFeature.h)}</small></h3>
@@ -237,7 +237,7 @@ export default function Garden() {
   );
 }
 
-function BedPanel({ bed, site, sun, onChange, onPush, date }: { bed: Bed; site: SiteConfig; sun?: ReturnType<typeof bedSunHours>; onChange: (p: Partial<Bed>) => void; onPush: () => void; date: string }) {
+function BedPanel({ bed, site, sun, onChange, onPush }: { bed: Bed; site: SiteConfig; sun?: ReturnType<typeof bedSunHours>; onChange: (p: Partial<Bed>) => void; onPush: () => void }) {
   const ft = site.units === 'ft';
   const u = (m: number) => ft ? `${(m / 0.3048).toFixed(1)} ft` : `${m.toFixed(2)} m`;
   const [q, setQ] = useState('');

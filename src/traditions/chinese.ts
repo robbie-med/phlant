@@ -1,4 +1,4 @@
-import { add, addAll, mk, type Tradition, SOW_ALL, type Task } from './types';
+import { addAll, mk, type Tradition, SOW_ALL, type Task } from './types';
 import { ZH_MONTHS, zhDay } from '../astro/lunisolar';
 import { BRANCHES } from '../astro/sexagenary';
 
@@ -63,7 +63,7 @@ export function makeChinese(region: ZhRegion): Tradition {
     name: `中国农历 · ${R.zh}`,
     region: `China — ${R.name}`,
     flag: '🇨🇳',
-    summary: `The Chinese farmer\'s almanac (通书) reads the 24 节气 with their regional proverbs (农谚), the lunar month and day, and the day\'s sexagenary 干支 through the Twelve Day Officers (建除十二神) that mark a day 宜栽种 (good for planting) or 忌. Regional variant: ${R.name} (${R.zh}) — ${R.desc}`,
+    summary: `The Chinese farmer's almanac (通书) reads the 24 节气 with their regional proverbs (农谚), the lunar month and day, and the day's sexagenary 干支 through the Twelve Day Officers (建除十二神) that mark a day 宜栽种 (good for planting) or 忌. Regional variant: ${R.name} (${R.zh}) — ${R.desc}`,
     basis: ['24 节气 and 72 候', '农历 lunisolar date (CST)', '干支 day → 建除十二神 day officer', '月忌日 (lunar 5, 14, 23)', 'Regional 农谚'],
     sources: ['《齐民要术》 (6th c.)', '《授时通考》', '通书 / 通勝 (Hong Kong almanac)', '中国农业博物馆 二十四节气'],
     evaluate(ctx) {
@@ -73,7 +73,7 @@ export function makeChinese(region: ZhRegion): Tradition {
       addAll(d, t.do, 2, `${term.zh} (${term.pinyin}): ${t.all}`);
       if (t.by?.[region]) { d.notes.push(t.by[region]!); }
       d.notes.push(t.all.split(' — ')[0]);
-      if (t.do.some(x => SOW_ALL.includes(x))) addAll(d, SOW_ALL.filter(x => !t.do.includes(x)), -1, `${term.zh}: not this term\'s crop`);
+      if (t.do.some(x => SOW_ALL.includes(x))) addAll(d, SOW_ALL.filter(x => !t.do.includes(x)), -1, `${term.zh}: not this term's crop`);
       if (region !== 'lingnan' && (ctx.seasonalTermIndex >= 19 || ctx.seasonalTermIndex <= 0)) addAll(d, [...SOW_ALL, 'transplant'], -2, `${term.zh}: dormant season`);
       if (region === 'northeast' && (ctx.seasonalTermIndex >= 15 || ctx.seasonalTermIndex <= 3)) addAll(d, [...SOW_ALL, 'transplant'], -2, '东北: outside the short frost-free season');
 

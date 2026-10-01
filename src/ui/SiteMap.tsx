@@ -33,7 +33,7 @@ export default function SiteMap({ lat, lon, onMove, acres, onAcres, inUS }: Prop
     map.current = m;
     setTimeout(() => m.invalidateSize(), 50);
     return () => { try { m.off(); m.remove(); } catch { /* mid-animation */ } map.current = null; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // keep marker/box in sync with props

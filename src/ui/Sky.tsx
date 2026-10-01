@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import * as A from 'astronomy-engine';
 import { useSettings, useSite, setState } from '../state/store';
-import { MoonDisc, todayYmd, fmtMD, fmtYMD } from './common';
+import { todayYmd, fmtMD, fmtYMD } from './common';
 import { solarTermsCached } from '../astro/solarterms';
 import { moonState, SIGN_ELEMENT, SIGN_GLYPH, moonRiseSet, TROPICAL_SIGNS, SIDEREAL_BOUNDS, signIngresses, type MoonState } from '../astro/moon';
 import { addDays, midnightAtOffset, noonAtOffset, tzOffsetHours, fmtTime, civilDateAtOffset, fmtDateTime } from '../astro/dates';
@@ -351,7 +351,6 @@ function YearWheel({ year, today }: { year: number; today: string }) {
 
 /* ---------- pattern grid, rebuilt ---------- */
 function PatternGrid() {
-  const site = useSite();
   const [start, setStart] = useState(new Date().getUTCFullYear() - 10);
   const years = 20;
   const [mode, setMode] = useState<'phase' | 'distance' | 'declination'>('phase');

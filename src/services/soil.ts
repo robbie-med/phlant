@@ -122,7 +122,7 @@ export async function fetchSoilMap(lat: number, lon: number, acres: number, sign
     const [mukey, name, wkt] = r; if (!wkt) continue;
     const polys = wktToRings(wkt);
     let rec = byMukey.get(mukey); if (!rec) { rec = { mukey, name, rings: [], areaShare: 0 }; byMukey.set(mukey, rec); }
-    for (const rings of polys) { rec.rings.push(...rings.map((ring, i) => ring)); const a = ringArea(rings[0], lat) - rings.slice(1).reduce((x, h) => x + ringArea(h, lat), 0); rec.areaShare += a; total += a; }
+    for (const rings of polys) { rec.rings.push(...rings); const a = ringArea(rings[0], lat) - rings.slice(1).reduce((x, h) => x + ringArea(h, lat), 0); rec.areaShare += a; total += a; }
   }
   const polygons = [...byMukey.values()].map(p => ({ ...p, areaShare: total ? p.areaShare / total : 0 })).sort((a, b) => b.areaShare - a.areaShare);
   // attributes: dominant component texture & drainage per mukey

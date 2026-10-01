@@ -5,7 +5,7 @@ import { useSettings, useSite, setState } from '../state/store';
 import { MoonDisc, phaseName, scoreColor, scoreWord, fmtYMD, todayYmd } from './common';
 import { Section, Acc, Stat } from './kit';
 import { SIGN_GLYPH, nextQuarters, moonRiseSet } from '../astro/moon';
-import { fmtTime, addDays, midnightAtOffset, tzOffsetHours, noonAtOffset, fmtDateTime } from '../astro/dates';
+import { fmtTime, addDays, midnightAtOffset, tzOffsetHours, fmtDateTime } from '../astro/dates';
 import * as A from 'astronomy-engine';
 import { PLANTS } from '../data/plants';
 import { fetchForecast, type Forecast } from '../services/climate';

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { SiteConfig, Feature } from '../state/store';
+import type { SiteConfig } from '../state/store';
 import { FEATURE_DEFAULTS } from '../state/store';
 import { PLANT_BY_ID } from '../data/plants';
 import { sunAt, sunDirPlan, type SunSample } from '../garden/sun';
@@ -160,7 +160,7 @@ export default function Garden3D({ site, date, hour, selectedId, onSelect, sampl
     let frame = 0; const loop = () => { controls.update(); renderer.render(scene, camera); frame = requestAnimationFrame(loop); }; loop();
     world.current = { renderer, scene, camera, controls, sun, sky, sunMesh, pick, frame, dispose: () => { cancelAnimationFrame(frame); ro.disconnect(); renderer.domElement.removeEventListener('pointerdown', onDown); renderer.domElement.removeEventListener('pointerup', onUp); controls.dispose(); scene.traverse(o => { const m = o as THREE.Mesh; m.geometry?.dispose?.(); const mat = m.material as THREE.Material | THREE.Material[] | undefined; if (Array.isArray(mat)) mat.forEach(x => x.dispose()); else mat?.dispose?.(); }); renderer.dispose(); el.removeChild(renderer.domElement); } };
     return () => { world.current?.dispose(); world.current = null; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [site.beds, site.features, site.rotationDeg, site.widthM, site.depthM, site.windDeg, selectedId, samples]);
 
   // ---- sun position per hour (cheap update) ----

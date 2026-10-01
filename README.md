@@ -1,36 +1,94 @@
-# Phlant — comparative moon & tradition planting almanac
+<p align="center">
+  <img src="public/icon.svg" width="72" alt="" />
+</p>
+<h1 align="center">Phlant</h1>
+<p align="center"><b>Seven planting traditions, one sky, your soil.</b><br/>
+A comparative moon-and-tradition planting almanac that computes everything from real ephemeris, for any place on Earth, and works offline.</p>
 
-Seven planting traditions, one sky. For any location on Earth, Phlant computes the real
-ephemeris (Moon phase, tropical sign, sidereal constellation, ascending/descending, nodes,
-perigee, Saturn opposition, 24 solar terms, Chinese/Korean lunisolar date, sexagenary day)
-and runs each tradition's rules over it, then shows where they agree and disagree:
+<p align="center">
+  <a href="https://phlant.robbiemed.org">phlant.robbiemed.org</a> ·
+  <a href="https://github.com/robbie-med/phlant/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/robbie-med/phlant/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="https://github.com/robbie-med/phlant/actions/workflows/pages.yml"><img alt="Deploy" src="https://github.com/robbie-med/phlant/actions/workflows/pages.yml/badge.svg" /></a>
+  <img alt="MIT" src="https://img.shields.io/badge/license-MIT-7fb069" />
+  <img alt="PWA" src="https://img.shields.io/badge/PWA-offline%20after%20one%20download-e9d8a6" />
+</p>
 
-Korean 농사력 · Chinese 农历/通书 (华北, 江南, 岭南, 东北 variants) · Biodynamic (Thun) ·
-French Rustica · English cottage lore · Russian лунный календарь · American Northeast almanac & the Signs.
+<p align="center"><img src="docs/screenshots/today.png" width="880" alt="Today page: Moon, one-line verdict, weather, scored garden tasks" /></p>
 
-Nothing here is a lookup table — everything is computed, so it works for 2026 or 2060, Tulsa or Wyoming.
+## What it does
 
-## Deployed
-- https://phlant.robbiemed.org — GitHub Pages, built by `.github/workflows/pages.yml` on every push to `main` (DNS: Cloudflare CNAME → robbie-med.github.io).
-- https://field.bo-bob.com — `phlant.service` (systemd --user) serves `dist/` on 127.0.0.1:3510 behind the diet-loggers Cloudflare tunnel.
-Redeploy: `npm run build` (the service reads dist/ live; no restart needed).
+Most moon-gardening apps pick one tradition and print a lookup table. Phlant computes the sky for your coordinates and date, runs **seven traditions** over it as independent rule engines, and shows you where they agree and why they disagree:
 
-## Run
+| | Tradition | What it reads |
+|---|---|---|
+| 🇰🇷 | **Korean 농사력** | 24 절기 by exact solar longitude, 음력 (KST), 삼복, 한식, 손 없는 날, 농가월령가 |
+| 🇨🇳 | **Chinese 农历 / 通书** — 华北, 江南, 岭南, 东北 variants | 节气 with regional 农谚, lunar date (CST), 干支 day → 建除十二神 day officers, 月忌日 |
+| 🇩🇪 | **Biodynamic (Maria Thun)** | real sidereal constellations (IAU boundaries) → root/leaf/flower/fruit days, ascending/descending Moon, nodes, perigee, Moon ☍ Saturn |
+| 🇫🇷 | **Jardiner avec la Lune (Rustica)** | lune montante/descendante, jours racines/feuilles/fleurs/fruits, nœuds, apogée/périgée, lune rousse, saints de glace |
+| 🇬🇧 | **English cottage lore** | waxing/waning, change of the Moon, Tresillian peak, saints' days |
+| 🇷🇺 | **Лунный посевной календарь** | tropical signs (fertile/barren), forbidden days, лунные сутки by moonrise, Orthodox folk calendar |
+| 🇺🇸 | **Old Farmer's Almanac & the Signs** | Moon quarter (light/dark), tropical sign → body part, fruitful/barren, Northeast folk dates |
+
+Nothing is a lookup table: the Moon's phase, both zodiacs, declination, distance, nodes, the solar terms, the lunisolar months and leap months, and the sexagenary day are all computed on-device with [astronomy-engine](https://github.com/cosinekitty/astronomy), and pinned by tests to known calendar facts.
+
+### Your place, not a generic one
+
+- **Site packs** — one download per location, then fully offline: ten years of temperature history → your frost dates and hardiness zone; three years of hourly wind → a wind rose by month; the **USDA soil survey** at your pin (SoilGrids elsewhere); nearby **USGS** stream and groundwater gauges; elevation. Several sites, export/import.
+- **Soil map** — the official SSURGO polygons for 0.25–200 acres around the pin, with each unit's share, texture, drainage and capability class, on an OpenStreetMap base map (Leaflet).
+- **Weather** — 7-day outlook with soil temperature and moisture, frost and rain warnings, and which in-window crops will germinate at today's soil temperature.
+
+### The garden
+
+- **2D plan** with beds, raised heights, plantings, and shadow casters (house, trees, fences, sheds, greenhouses). Set the plan's compass orientation. Scrub the hour and watch real shadows move; see **sun hours per bed** for any date, with who shades whom.
+- **3D view** (three.js) lit by the actual Sun for the date and hour, with soft shadows, stylised crops at true height and spacing, the day's sun path, and north and wind arrows.
+- Companion planting from seven traditions, windward advice from the month's dominant wind, templates (Three Sisters, Korean 김장 bed, French potager pairs), undo, import/export.
+
+### Learn the sky
+
+The Sky page explains the Moon's five clocks (phase, zodiac, height, distance, nodes) with live diagrams, draws the ring of the ecliptic with Sun, Moon and planets against both zodiacs, lists exact sign-change times, and shows twenty years of patterns at once so the 19-year Metonic repeat is visible.
+
+<p align="center">
+  <img src="docs/screenshots/garden-3d.png" width="430" alt="3D garden with real sun shadows" />
+  <img src="docs/screenshots/sky.png" width="430" alt="Sky page: five clocks and the ecliptic ring" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/site.png" width="430" alt="Site page: map picker and USDA soil map" />
+  <img src="docs/screenshots/garden.png" width="430" alt="2D garden plan with shadows and sun hours" />
+</p>
+<p align="center">
+  <img src="docs/screenshots/calendar.png" width="430" alt="Month calendar coloured by consensus" />
+  <img src="docs/screenshots/today-light.png" width="430" alt="Light theme" />
+</p>
+
+## Run it
+
 ```bash
 npm install
-npm run dev        # Vite dev server on 127.0.0.1:3917 (see /home/user/Projects/PORTS.md)
-npm test           # vitest: calendar anchors, lunisolar leap months, tradition engines
-./start.sh         # build + preview on 127.0.0.1:3510
+npm run dev        # http://127.0.0.1:3917
+npm test           # vitest — calendar anchors, lunisolar leap months, IAU boundaries, sun geometry
+npm run build      # PWA in dist/
 ```
-APK later: `npm run build && npm run cap:init && npm run cap:android` (Capacitor), then open `android/` in Android Studio.
 
-## Data sources (free, keyless, fetched once per site into an offline "site pack")
-- Soil: USDA NRCS Soil Data Access (SSURGO) in the US; ISRIC SoilGrids elsewhere.
-- Water: USGS Water Data OGC API (nearby stream/groundwater gauges; live readings need network).
-- Climate: Open-Meteo ERA5 archive → 10-year frost dates, hardiness zone, GDD, wind rose; geocoding; 7-day forecast with soil temperature.
-- Elevation: USGS EPQS / Open-Meteo.
-- Ephemeris: astronomy-engine (MIT), on-device.
+Node 18+ (18 needs the Web Crypto flag the build script already passes). Full details in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Status (2026-10-01)
-Done: astro core + tests, 7 tradition engines (10 incl. Chinese regions) + consensus, plant DB (48 crops with Korean/Chinese names, companions), services + offline site-pack storage, settings store, Today view, month & year calendars.
-All seven tabs built. Sky: five-clock explainer, ecliptic ring with planets, month panels with exact sign ingress times, 20-year pattern grid. Garden: 2D plan editor (beds, house/tree/fence/shed/greenhouse/path casters, plan orientation, snapping, undo, templates, export/import) with hourly shadow footprints and per-bed sun hours from the real solar path (`src/garden/sun.ts`, tested), plus a three.js 3D view (lazy chunk) with real sun position, soft shadows, plants, and view presets. Today: weather strip (Open-Meteo, cached).
+**Android:** the build is Capacitor-ready — `npm run cap:init && npm run cap:android`, then open `android/` in Android Studio. See [docs/DEPLOY.md](docs/DEPLOY.md).
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — how the ephemeris, traditions, garden geometry and offline packs fit together
+- [docs/TRADITIONS.md](docs/TRADITIONS.md) — every tradition, what it reads, its sources, and a worked example (generated from the code)
+- [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) — every external service, endpoint and licence
+- [docs/DEPLOY.md](docs/DEPLOY.md) — GitHub Pages, self-hosting, APK
+- [CHANGELOG.md](CHANGELOG.md)
+
+## Privacy
+
+No accounts, no backend, no analytics. Settings and site packs live in your browser. The only data sent anywhere are coordinates to the public services in `docs/DATA-SOURCES.md`.
+
+## Contributing
+
+Corrections to tradition rules are especially welcome — every rule cites a source, and there is an [issue template](.github/ISSUE_TEMPLATE/tradition.yml) for them. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md).
+
+## Licence
+
+MIT © robbie-med. Third-party data and libraries keep their own licences — see [THIRD-PARTY.md](THIRD-PARTY.md).

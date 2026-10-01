@@ -1,0 +1,11 @@
+name: Feature request
+description: Something the app should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes: { label: The idea, description: "What, and what you would do with it." }
+    validations: { required: true }
+  - type: textarea
+    id: data
+    attributes: { label: Data it needs, description: "If it needs external data, is there a free, keyless, CORS-enabled source? (See docs/DATA-SOURCES.md.)" }
