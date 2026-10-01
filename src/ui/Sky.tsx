@@ -57,11 +57,11 @@ function miniMoonPath(phase: number, cx: number, cy: number, r: number, north: b
 }
 
 function PhaseClock({ m, north }: { m: MoonState; north: boolean }) {
-  const R = 58, cx = 80, cy = 70;
+  const R = 58, cx = 100, cy = 70;
   const a = (deg: number) => (-90 + deg) * Math.PI / 180; // new moon at top, clockwise
   return (
     <Clock title="1 · Phase" period="29.5 days (synodic month)" who="English lore, the Russian calendar and the American almanac: waxing for crops that grow upward, waning for roots; the exact new and full Moon are rest days." text="New Moon at the top: the Moon sits between us and the Sun, unlit. It moves clockwise here, growing (waxing) on the right side until Full at the bottom, then shrinking (waning) on the left. 'Light of the Moon' is the right half, 'dark of the Moon' the left.">
-      <svg width={160} height={150} viewBox="0 0 160 150">
+      <svg width={200} height={150} viewBox="0 0 200 150">
         <circle cx={cx} cy={cy} r={R} fill="none" stroke="var(--line)" />
         {Array.from({ length: 8 }, (_, i) => { const p = i * 45; const x = cx + R * Math.cos(a(p)), y = cy + R * Math.sin(a(p)); return <g key={i}><circle cx={x} cy={y} r={9} fill="#22301f" stroke="var(--line)" strokeWidth={.5} /><path d={miniMoonPath(p, x, y, 9, north)} fill="var(--moon)" /></g>; })}
         <text x={cx} y={cy - R + 24} textAnchor="middle" fontSize={8} fill="var(--muted)">new</text>
