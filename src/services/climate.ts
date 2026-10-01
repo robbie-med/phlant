@@ -6,17 +6,26 @@ export async function geocode(q: string, signal?: AbortSignal): Promise<Place[]>
   return (j.results ?? []).map((r: any) => ({ name: r.name, admin1: r.admin1, country: r.country, lat: r.latitude, lon: r.longitude, tz: r.timezone, elevationM: r.elevation }));
 }
 
-/** Rough Köppen-style preset from the pack statistics (ids match CLIMATES in data/plants.ts). */
+/** Köppen-style preset from monthly means (ids match CLIMATES in data/plants.ts). */
 export function climatePreset(c: FrostStats, lat: number): string {
+  const mean = c.monthlyMin.map((mn, i) => (mn + c.monthlyMax[i]) / 2);
+  const coldest = Math.min(...mean), hottest = Math.max(...mean);
   const annual = c.monthlyRain.reduce((a, b) => a + b, 0);
-  const summer = lat >= 0 ? c.monthlyRain[5] + c.monthlyRain[6] + c.monthlyRain[7] : c.monthlyRain[11] + c.monthlyRain[0] + c.monthlyRain[1];
-  if (annual < 450) return 'semi_arid';
-  if (c.frostFreeDays < 110) return 'subarctic';
-  if (summer < 0.15 * annual && c.minTempMeanC > -6) return 'mediterranean';
-  if (c.minTempMeanC > -3 && c.hottestWeekMaxC < 27) return 'oceanic';
-  if (c.minTempMeanC > -2 && annual > 1200 && Math.abs(lat) < 30) return 'subtropical_monsoon';
-  if (c.minTempMeanC < -12 || c.hottestWeekMaxC < 30) return 'humid_continental';
-  return 'humid_subtropical';
+  const summerIdx = lat >= 0 ? [5, 6, 7] : [11, 0, 1], winterIdx = lat >= 0 ? [11, 0, 1] : [5, 6, 7];
+  const summerRain = summerIdx.reduce((a, i) => a + c.monthlyRain[i], 0), winterRain = winterIdx.reduce((a, i) => a + c.monthlyRain[i], 0);
+  const meanT = mean.reduce((a, b) => a + b, 0) / 12;
+  // Köppen dryness threshold (mm): 20·T + 280 if summer-wet, 20·T + 140 even, 20·T if winter-wet
+  const thr = 20 * meanT + (summerRain > 0.7 * annual ? 280 : winterRain > 0.7 * annual ? 0 : 140);
+  if (annual < thr) return 'semi_arid';
+  if (hottest < 10) return 'subarctic';
+  if (coldest > -3) {
+    if (summerRain < winterRain / 3 && summerRain < 40) return 'mediterranean';
+    if (hottest < 22) return 'oceanic';
+    if (coldest > 8 && Math.abs(lat) < 30) return 'subtropical_monsoon';
+    return 'humid_subtropical';
+  }
+  if (c.frostFreeDays < 110 || hottest < 17) return 'subarctic';
+  return 'humid_continental';
 }
 
 export interface FrostStats {

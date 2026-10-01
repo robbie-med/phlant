@@ -101,7 +101,7 @@ export default function Site() {
         <div className="row" style={{ marginTop: 8 }}><button onClick={removeSite} style={{ color: 'var(--bad)' }}>Delete site</button></div>
       </div>
 
-      <div className="card">
+      <div className="card wide">
         <h2>Offline data pack <small>· {pack ? `built ${new Date(pack.builtAt).toLocaleString()}` : 'not downloaded yet'}</small></h2>
         {progress && <div><div className="sr">{progress.step}</div><div className="progress"><i style={{ width: `${(progress.done / progress.total) * 100}%` }} /></div></div>}
         <div className="row" style={{ margin: '8px 0' }}>
