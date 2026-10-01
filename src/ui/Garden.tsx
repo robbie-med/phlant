@@ -5,6 +5,8 @@ import { relation } from '../data/companions';
 import { sunSamples, bedSunHours, sunDirPlan, bearingToDir, sunAt, type Box } from '../garden/sun';
 import { tzOffsetHours, noonAtOffset, addDays, fmtTime } from '../astro/dates';
 import { todayYmd, fmtYMD } from './common';
+import { loadPack, type SitePack } from '../services/sitepack';
+import { WindRose, isClimatology } from './WindRose';
 
 const Garden3D = React.lazy(() => import('./Garden3D'));
 
@@ -26,6 +28,11 @@ export default function Garden() {
   const [hour, setHour] = useState(14);
   const [showShadows, setShowShadows] = useState(true);
   const [analysisDate, setAnalysisDate] = useState<'today' | 'jun' | 'dec'>('today');
+  const [pack, setPack] = useState<SitePack | undefined>();
+  useEffect(() => { let on = true; loadPack(site.id).then(p => { if (on) setPack(p); }); return () => { on = false; }; }, [site.id]);
+  const windClim = isClimatology(pack?.wind) ? pack!.wind as import('../services/climate').WindClimatology : null;
+  const planMonth = +date.slice(5, 7) - 1;
+  const windDeg = windClim ? windClim.monthlyDominantDeg[planMonth] : site.windDeg;
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ type: 'bed' | 'feature'; id: string; dx: number; dy: number; mode: 'move' | 'resize'; moved: boolean } | null>(null);
   const undo = useRef<Array<{ beds: Bed[]; features: Feature[] }>>([]);
@@ -86,7 +93,7 @@ export default function Garden() {
   const findings = useMemo(() => {
     const out: Array<{ level: 'bad' | 'warn' | 'good'; text: string }> = [];
     const near = (a: Bed, b: Bed) => { const dx = Math.max(0, Math.max(a.x, b.x) - Math.min(a.x + a.w, b.x + b.w)); const dy = Math.max(0, Math.max(a.y, b.y) - Math.min(a.y + a.h, b.y + b.h)); return Math.hypot(dx, dy) < 1.0; };
-    const [wx, wy] = sunDirPlan(site.windDeg, site.rotationDeg); // direction toward where wind comes FROM
+    const [wx, wy] = sunDirPlan(windDeg, site.rotationDeg); // direction toward where wind comes FROM
     for (const a of beds) {
       const sun = sunByBed[a.id];
       if (sun) {
@@ -99,7 +106,7 @@ export default function Garden() {
       for (const b of beds) if (a.id < b.id && near(a, b)) for (const pa of a.plants) for (const pb of b.plants) { const r = relation(pa, pb); if (r && !r.good) out.push({ level: 'warn', text: `${a.label} ↔ ${b.label} (adjacent): ${PLANT_BY_ID[pa].name} near ${PLANT_BY_ID[pb].name} — ${r.why}` }); }
       const tender = a.plants.map(p => PLANT_BY_ID[p]).filter(p => !p.frostHardy && p.heightCm >= 90);
       const windward = (a.x + a.w / 2 - W / 2) * wx + (a.y + a.h / 2 - D / 2) * wy > Math.max(W, D) * 0.25 && !features.some(f => f.heightM >= 1.5 && (f.x + f.w / 2 - (a.x + a.w / 2)) * wx + (f.y + f.h / 2 - (a.y + a.h / 2)) * wy > 0 && Math.abs((f.x + f.w / 2 - (a.x + a.w / 2)) * -wy + (f.y + f.h / 2 - (a.y + a.h / 2)) * wx) < Math.max(f.w, f.h));
-      if (windward && tender.length) out.push({ level: 'warn', text: `${a.label} is on the ${bearingToDir(site.windDeg)} (windward) edge with nothing upwind: ${tender.map(t => t.name).join(', ')} will be battered. Stake hard, or add a fence/hedge feature or a row of sunflower/corn upwind.` });
+      if (windward && tender.length) out.push({ level: 'warn', text: `${a.label} is on the ${bearingToDir(windDeg)} (windward) edge with nothing upwind: ${tender.map(t => t.name).join(', ')} will be battered. Stake hard, or add a fence/hedge feature or a row of sunflower/corn upwind.` });
       if (windward && a.plants.some(p => ['sunflower', 'corn'].includes(p))) out.push({ level: 'good', text: `${a.label}: ${a.plants.filter(p => ['sunflower', 'corn'].includes(p)).map(p => PLANT_BY_ID[p].name).join('/')} on the windward edge is a living windbreak for everything downwind.` });
       if ((a.heightCm ?? 0) >= 15 && site.soil === 'clay') out.push({ level: 'good', text: `${a.label}: raised ${a.heightCm} cm — the right answer to clay (roots get out of the saturated layer).` });
     }
@@ -108,7 +115,7 @@ export default function Garden() {
     if (!features.length) out.push({ level: 'warn', text: 'No shadow casters yet — add your house, trees and fences (toolbar) so the sun-hours per bed mean something.' });
     if (!beds.length) out.push({ level: 'good', text: 'Add beds, then click one to assign plants. Drag to move, drag the corner to resize. Ctrl+Z undoes.' });
     return out;
-  }, [beds, features, site, W, D, north, sunByBed, analysisYmd]);
+  }, [beds, features, site, W, D, north, sunByBed, analysisYmd, windDeg]);
 
   const selected = sel?.type === 'bed' ? beds.find(b => b.id === sel.id) : undefined;
   const selFeature = sel?.type === 'feature' ? features.find(f => f.id === sel.id) : undefined;
@@ -119,7 +126,7 @@ export default function Garden() {
     <div className="grid">
       <div className="card wide">
         <div className="row" style={{ justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0 }}>Garden plan <small>· {u(W)} × {u(D)} · up = {bearingToDir(site.rotationDeg)} · wind from {bearingToDir(site.windDeg)} · {site.name}</small></h2>
+          <h2 style={{ margin: 0 }}>Garden plan <small>· {u(W)} × {u(D)} · up = {bearingToDir(site.rotationDeg)} · wind from {bearingToDir(windDeg)}{windClim ? ` in ${fmtYMD(date, { month: 'long' })}` : ''} · {site.name}</small></h2>
           <div className="row"><button className={view === '2d' ? 'primary' : ''} onClick={() => setView('2d')}>Plan</button><button className={view === '3d' ? 'primary' : ''} onClick={() => setView('3d')}>3D</button></div>
         </div>
         <div className="row" style={{ marginTop: 8 }}>
@@ -168,11 +175,11 @@ export default function Garden() {
             {/* sun marker on the edge */}
             {sunNow.altitude > 0 && (() => { const [dx, dy] = sunDirPlan(sunNow.azimuth, site.rotationDeg); const cx = 380, cy = H / 2; const R = Math.min(370, H / 2 - 10); return <g><circle cx={cx + dx * R} cy={cy + dy * R} r={10} fill="#f3c969" /><text x={cx + dx * R} y={cy + dy * R + 4} textAnchor="middle" fontSize={10} fill="#0f1a13">☀</text></g>; })()}
             {/* wind arrow */}
-            {(() => { const [wx, wy] = sunDirPlan(site.windDeg, site.rotationDeg); const cx = 380, cy = H / 2; const R = Math.min(330, H / 2 - 30); const x1 = cx + wx * R, y1 = cy + wy * R; return <g><line x1={x1} y1={y1} x2={x1 - wx * 40} y2={y1 - wy * 40} stroke="#5aa0d9" strokeWidth={3} markerEnd="url(#arr)" /><text x={x1} y={y1 - 8} fontSize={10} fill="#5aa0d9" textAnchor="middle">wind {bearingToDir(site.windDeg)}</text></g>; })()}
+            {(() => { const [wx, wy] = sunDirPlan(windDeg, site.rotationDeg); const cx = 380, cy = H / 2; const R = Math.min(330, H / 2 - 30); const x1 = cx + wx * R, y1 = cy + wy * R; return <g><line x1={x1} y1={y1} x2={x1 - wx * 40} y2={y1 - wy * 40} stroke="#5aa0d9" strokeWidth={3} markerEnd="url(#arr)" /><text x={x1} y={y1 - 8} fontSize={10} fill="#5aa0d9" textAnchor="middle">wind {bearingToDir(windDeg)}</text></g>; })()}
           </svg>
         ) : (
           <Suspense fallback={<div className="muted" style={{ padding: 40 }}>Loading 3D…</div>}>
-            <Garden3D site={site} date={date} hour={hour} selectedId={sel?.id ?? null} onSelect={(type, id) => setSel(id ? { type, id } : null)} samples={samples} />
+            <Garden3D site={{ ...site, windDeg }} date={date} hour={hour} selectedId={sel?.id ?? null} onSelect={(type, id) => setSel(id ? { type, id } : null)} samples={samples} />
           </Suspense>
         )}
         <p className="sr">Drag to move, drag the small square to resize. Shadows are cast from the real Sun position for the date and hour above (plan scale, so a 6 m house throws its true shadow). Beds show their sun hours for the analysis date chosen below.</p>
@@ -192,6 +199,14 @@ export default function Garden() {
         </div>
       )}
 
+      <div className="card">
+        <h2>Wind at {site.name} <small>· {windClim ? `${windClim.source} · plan uses ${fmtYMD(date, { month: 'long' })}'s dominant direction` : 'download the site pack for a real wind rose'}</small></h2>
+        {windClim ? <div className="row" style={{ alignItems: 'flex-start' }}>
+          <WindRose wind={windClim} month={planMonth} rotationDeg={site.rotationDeg} title={`${fmtYMD(date, { month: 'long' })} · rotated to the plan`} />
+          <WindRose wind={windClim} rotationDeg={site.rotationDeg} size={160} title="all year" />
+          <div className="sr" style={{ flex: 1, minWidth: 160 }}>Wedge length = share of the month's wind energy (speed-weighted hours) from that direction. {bearingToDir(windClim.monthlyDominantDeg[planMonth])} dominates in {fmtYMD(date, { month: 'long' })} at {windClim.monthlyMeanSpeed[planMonth]} km/h mean, calm {(windClim.monthlyCalm[planMonth] * 100).toFixed(0)}% of hours. {windClim.monthlyDominantDeg[planMonth] !== windClim.dominantDeg ? `Year-round the dominant wind is ${bearingToDir(windClim.dominantDeg)} — the seasons swing it.` : ''} Put windbreaks and tall tender crops with this in mind; the full month-by-direction heatmap is on the Site page.</div>
+        </div> : <p className="sr">Using the manual setting ({bearingToDir(site.windDeg)}). On the Site page, download the data pack to replace it with three years of hourly measurements.</p>}
+      </div>
       <div className="card">
         <h2>Sun hours per bed <small>· computed from the real solar path and your casters</small></h2>
         <div className="chips" style={{ marginBottom: 8 }}>{([['today', fmtYMD(date)], ['jun', 'Jun 21 (longest day)'], ['dec', 'Dec 21 (shortest)']] as const).map(([k, l]) => <button key={k} className={`chip ${analysisDate === k ? 'on' : ''}`} onClick={() => setAnalysisDate(k)}>{l}</button>)}</div>

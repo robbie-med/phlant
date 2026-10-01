@@ -6,6 +6,7 @@ import { geocode, fetchForecast, climatePreset, type Forecast } from '../service
 import { buildSitePack, deletePack, exportPacks, loadAllPacks, loadPack, savePack, type SitePack } from '../services/sitepack';
 import { fetchLatest, type Reading } from '../services/water';
 import { fmtMD, Toast } from './common';
+import { WindHeatmap, WindRose, isClimatology } from './WindRose';
 
 const DIRS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
 export const degToDir = (d: number) => DIRS[Math.round(((d % 360) + 360) % 360 / 22.5) % 16];
@@ -124,7 +125,11 @@ export default function Site() {
             <details><summary>Frost dates by year</summary><table className="t"><thead><tr><th>Year</th><th>Last spring</th><th>First autumn</th></tr></thead><tbody>{Object.keys(pack.climate.lastSpring.perYear).map(y => <tr key={y}><td>{y}</td><td>{pack.climate!.lastSpring.perYear[y] ? fmtMD(pack.climate!.lastSpring.perYear[y]!) : '—'}</td><td>{pack.climate!.firstFall.perYear[y] ? fmtMD(pack.climate!.firstFall.perYear[y]!) : '—'}</td></tr>)}</tbody></table></details>
           </div>
         )}
-        {pack?.wind && <p className="sr">Prevailing wind: {degToDir(pack.wind.dominantDeg)} year-round, {degToDir(pack.wind.growingSeasonDominantDeg)} in the growing season (applied to layout).</p>}
+        {pack?.wind && (isClimatology(pack.wind) ? <div>
+          <h3>Wind <small>· {pack.wind.source} · {degToDir(pack.wind.dominantDeg)} year-round, {degToDir(pack.wind.growingSeasonDominantDeg)} in the growing season</small></h3>
+          <div className="row" style={{ alignItems: 'flex-start' }}><WindRose wind={pack.wind} size={170} title="all year, north up" /><div style={{ flex: 1, minWidth: 260 }}><WindHeatmap wind={pack.wind} highlightMonth={new Date().getMonth()} /></div></div>
+          <p className="sr">Each row is a month, each column a compass direction; darker = more of that month's wind energy from that direction. The Garden page picks the row for the date you are planning.</p>
+        </div> : <p className="sr">Prevailing wind: {degToDir(pack.wind.dominantDeg)} year-round, {degToDir(pack.wind.growingSeasonDominantDeg)} in the growing season. Refresh the pack to get the month-by-direction rose.</p>)}
         {pack?.soil && (
           <div>
             <h3>Soil <small>· {pack.soil.source}</small></h3>

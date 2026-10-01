@@ -4,7 +4,7 @@
  */
 import { fetchSoil, type SoilReport } from './soil';
 import { fetchGauges, type Gauge } from './water';
-import { fetchFrostStats, fetchElevation, fetchWindRose, type FrostStats } from './climate';
+import { fetchFrostStats, fetchElevation, fetchWindRose, type FrostStats, type WindClimatology } from './climate';
 
 export interface SitePack {
   version: 1;
@@ -14,7 +14,7 @@ export interface SitePack {
   soil?: SoilReport | null;
   gauges?: Gauge[];
   climate?: FrostStats;
-  wind?: { sectors: number[]; dominantDeg: number; growingSeasonDominantDeg: number };
+  wind?: WindClimatology | { sectors: number[]; dominantDeg: number; growingSeasonDominantDeg: number };
   errors: string[];
 }
 
@@ -26,7 +26,7 @@ export async function buildSitePack(siteId: string, lat: number, lon: number, on
   const steps: Array<[string, number, (sig?: AbortSignal) => Promise<void>]> = [
     ['Elevation', 15000, async sig => { pack.elevationM = await fetchElevation(lat, lon, sig); }],
     ['Ten years of temperature history → frost dates & zone', 60000, async sig => { pack.climate = await fetchFrostStats(lat, lon, sig); }],
-    ['Prevailing wind (one year of daily data)', 30000, async sig => { pack.wind = await fetchWindRose(lat, lon, sig); }],
+    ['Wind rose by month (three years of hourly data)', 45000, async sig => { pack.wind = await fetchWindRose(lat, lon, sig); }],
     ['Soil survey (USDA SSURGO / SoilGrids)', 60000, async sig => { pack.soil = await fetchSoil(lat, lon, sig); }],
     ['Nearby USGS stream & groundwater gauges', 30000, async sig => { const inUS = lat > 17 && lat < 72 && lon > -180 && lon < -64; pack.gauges = inUS ? await fetchGauges(lat, lon, 25, sig) : []; }]
   ];

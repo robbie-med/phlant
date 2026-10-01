@@ -94,16 +94,46 @@ export async function fetchForecast(lat: number, lon: number, signal?: AbortSign
   return { fetchedAt: new Date().toISOString(), days: d.time.map((t: string, i: number) => ({ date: t, tmin: d.temperature_2m_min[i], tmax: d.temperature_2m_max[i], rain: d.precipitation_sum[i], windDir: d.wind_direction_10m_dominant[i], windMax: d.wind_speed_10m_max[i] })), soilTempC: h.soil_temperature_6cm[idx], soilMoisture: h.soil_moisture_3_to_9cm[idx] };
 }
 
-/** Prevailing wind direction from a year of hourly history (Open-Meteo archive). */
-export async function fetchWindRose(lat: number, lon: number, signal?: AbortSignal): Promise<{ sectors: number[]; dominantDeg: number; growingSeasonDominantDeg: number }> {
-  const y = new Date().getUTCFullYear() - 1;
-  const u = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${y}-01-01&end_date=${y}-12-31&daily=wind_direction_10m_dominant,wind_speed_10m_max&timezone=auto`;
+export interface WindClimatology {
+  years: number; source: string;
+  sectors: number[];            // 16 sectors (N, NNE, …), speed-weighted share of all hours, sums to 1
+  monthly: number[][];          // [month 0..11][sector 0..15] speed-weighted share within that month
+  monthlyCalm: number[];        // fraction of hours < 5 km/h per month
+  monthlyMeanSpeed: number[];   // km/h
+  monthlyDominantDeg: number[]; // bearing of the strongest sector per month
+  dominantDeg: number; growingSeasonDominantDeg: number;
+  maxGust?: number;
+}
+
+/** Three years of hourly wind (Open-Meteo ERA5) → wind rose by month. */
+export async function fetchWindRose(lat: number, lon: number, signal?: AbortSignal): Promise<WindClimatology> {
+  const endY = new Date().getUTCFullYear() - 1, startY = endY - 2;
+  const u = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startY}-01-01&end_date=${endY}-12-31&hourly=wind_direction_10m,wind_speed_10m&timezone=auto`;
   const res = await fetch(u, { signal }); if (!res.ok) throw new Error(`wind ${res.status}`);
   const j = await res.json();
+  const time: string[] = j.hourly.time, dir: (number | null)[] = j.hourly.wind_direction_10m, spd: (number | null)[] = j.hourly.wind_speed_10m;
+  const monthly = Array.from({ length: 12 }, () => Array(16).fill(0)), calm = Array(12).fill(0), n = Array(12).fill(0), sumSpd = Array(12).fill(0);
   const sectors = Array(16).fill(0), gs = Array(16).fill(0);
-  j.daily.time.forEach((t: string, i: number) => { const dir = j.daily.wind_direction_10m_dominant[i]; const sp = j.daily.wind_speed_10m_max[i]; if (dir == null) return; const s = Math.round(dir / 22.5) % 16; sectors[s] += sp ?? 1; const mo = +t.slice(5, 7); if (mo >= 4 && mo <= 10) gs[s] += sp ?? 1; });
+  let total = 0, gsTotal = 0;
+  for (let i = 0; i < time.length; i++) {
+    const d = dir[i], v = spd[i]; if (d == null || v == null) continue;
+    const mo = +time[i].slice(5, 7) - 1; n[mo]++; sumSpd[mo] += v;
+    if (v < 5) { calm[mo]++; continue; }
+    const sct = Math.round(d / 22.5) % 16;
+    monthly[mo][sct] += v; sectors[sct] += v; total += v;
+    const south = lat < 0; const inGs = south ? (mo >= 9 || mo <= 3) : (mo >= 3 && mo <= 9);
+    if (inGs) { gs[sct] += v; gsTotal += v; }
+  }
   const argmax = (a: number[]) => a.indexOf(Math.max(...a)) * 22.5;
-  return { sectors, dominantDeg: argmax(sectors), growingSeasonDominantDeg: argmax(gs) };
+  return {
+    years: endY - startY + 1, source: `Open-Meteo ERA5 hourly ${startY}–${endY}`,
+    sectors: sectors.map(v => v / (total || 1)),
+    monthly: monthly.map(row => { const t = row.reduce((a, b) => a + b, 0) || 1; return row.map(v => +(v / t).toFixed(4)); }),
+    monthlyCalm: calm.map((c, i) => +(c / (n[i] || 1)).toFixed(3)),
+    monthlyMeanSpeed: sumSpd.map((v, i) => +(v / (n[i] || 1)).toFixed(1)),
+    monthlyDominantDeg: monthly.map(argmax),
+    dominantDeg: argmax(sectors), growingSeasonDominantDeg: gsTotal ? argmax(gs) : argmax(sectors)
+  };
 }
 
 export async function fetchElevation(lat: number, lon: number, signal?: AbortSignal): Promise<number | undefined> {
