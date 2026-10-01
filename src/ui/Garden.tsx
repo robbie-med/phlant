@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { updateSite, useSite, useSettings, type Bed, type Feature, type FeatureKind, FEATURE_DEFAULTS, type SiteConfig } from '../state/store';
+import { updateSite, useSite, useSettings, setState, type Bed, type Feature, type FeatureKind, FEATURE_DEFAULTS, type SiteConfig } from '../state/store';
 import { PLANTS, PLANT_BY_ID } from '../data/plants';
 import { relation } from '../data/companions';
 import { sunSamples, bedSunHours, sunDirPlan, bearingToDir, sunAt, type Box } from '../garden/sun';
@@ -132,6 +132,8 @@ export default function Garden() {
         <div className="row" style={{ marginTop: 8 }}>
           <label className="f" style={{ minWidth: 220 }}><span>Orientation: top of plan points {bearingToDir(site.rotationDeg)} ({site.rotationDeg}°)</span><input type="range" min={0} max={359} value={site.rotationDeg} onChange={e => updateSite(site.id, { rotationDeg: +e.target.value })} /></label>
           <label className="f" style={{ minWidth: 220 }}><span>Sun at {String(hour).padStart(2, '0')}:00 on {fmtYMD(date)} — {sunNow.altitude > 0 ? `${sunNow.altitude.toFixed(0)}° high, ${bearingToDir(sunNow.azimuth)}` : 'below horizon'}</span><input type="range" min={0} max={23} value={hour} onChange={e => setHour(+e.target.value)} /></label>
+          <label className="f"><span>Date</span><div className="row"><input type="date" value={date} onChange={e => e.target.value && setState({ selectedDate: e.target.value })} style={{ width: 'auto' }} />
+            {([['Today', todayYmd(site.tz)], ['Mar 20', `${date.slice(0, 4)}-03-20`], ['Jun 21', `${date.slice(0, 4)}-06-21`], ['Sep 22', `${date.slice(0, 4)}-09-22`], ['Dec 21', `${date.slice(0, 4)}-12-21`]] as const).map(([l, d]) => <button key={l} className={`chip ${date === d ? 'on' : ''}`} onClick={() => setState({ selectedDate: d === todayYmd(site.tz) ? undefined : d })}>{l}</button>)}</div></label>
           <label className="row" style={{ fontSize: 13 }}><input type="checkbox" style={{ width: 'auto' }} checked={showShadows} onChange={e => setShowShadows(e.target.checked)} />shadows</label>
           <span className="sr">sunrise {sunrise ? fmtTime(sunrise, site.tz) : '—'} · sunset {sunset ? fmtTime(sunset, site.tz) : '—'}</span>
         </div>
