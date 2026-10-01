@@ -53,7 +53,7 @@ export const korean: Tradition = {
     if (ctx.hemisphere === 'S') d.notes.push('Southern hemisphere: seasonal advice shifted six months from the named term.');
 
     const L = ctx.koLunar;
-    const lunarTxt = `음력 ${L.leap ? '윤' : ''}${KO_MONTHS[L.month - 1]} ${L.day}일 (${ctx.sexDayKo}일)`;
+    const lunarTxt = `음력 ${L.leap ? '윤' : ''}${KO_MONTHS[L.month - 1]} ${L.day}일 (${ctx.sexDayKo.hangul}일)`;
     d.notes.push(lunarTxt);
     if ([9, 10, 19, 20, 29, 30].includes(L.day)) {
       addAll(d, ['transplant', 'graft', 'soil_compost'], 1, '손 없는 날 — no wandering spirits: the day to start something new, move plants, build beds');

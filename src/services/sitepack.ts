@@ -22,17 +22,18 @@ export type PackProgress = (step: string, done: number, total: number) => void;
 
 export async function buildSitePack(siteId: string, lat: number, lon: number, onProgress?: PackProgress): Promise<SitePack> {
   const pack: SitePack = { version: 1, siteId, builtAt: new Date().toISOString(), lat, lon, errors: [] };
-  const steps: Array<[string, () => Promise<void>]> = [
-    ['Elevation', async () => { pack.elevationM = await fetchElevation(lat, lon); }],
-    ['Ten years of temperature history → frost dates & zone', async () => { pack.climate = await fetchFrostStats(lat, lon); }],
-    ['Prevailing wind (one year of daily data)', async () => { pack.wind = await fetchWindRose(lat, lon); }],
-    ['Soil survey (USDA SSURGO / SoilGrids)', async () => { pack.soil = await fetchSoil(lat, lon); }],
-    ['Nearby USGS stream & groundwater gauges', async () => { const inUS = lat > 17 && lat < 72 && lon > -180 && lon < -64; pack.gauges = inUS ? await fetchGauges(lat, lon) : []; }]
+  const timeout = (ms: number) => (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal) ? AbortSignal.timeout(ms) : undefined;
+  const steps: Array<[string, number, (sig?: AbortSignal) => Promise<void>]> = [
+    ['Elevation', 15000, async sig => { pack.elevationM = await fetchElevation(lat, lon, sig); }],
+    ['Ten years of temperature history → frost dates & zone', 60000, async sig => { pack.climate = await fetchFrostStats(lat, lon, sig); }],
+    ['Prevailing wind (one year of daily data)', 30000, async sig => { pack.wind = await fetchWindRose(lat, lon, sig); }],
+    ['Soil survey (USDA SSURGO / SoilGrids)', 60000, async sig => { pack.soil = await fetchSoil(lat, lon, sig); }],
+    ['Nearby USGS stream & groundwater gauges', 30000, async sig => { const inUS = lat > 17 && lat < 72 && lon > -180 && lon < -64; pack.gauges = inUS ? await fetchGauges(lat, lon, 25, sig) : []; }]
   ];
   let i = 0;
-  for (const [label, fn] of steps) {
+  for (const [label, ms, fn] of steps) {
     onProgress?.(label, i, steps.length);
-    try { await fn(); } catch (e: any) { pack.errors.push(`${label}: ${e?.message ?? e}`); }
+    try { await fn(timeout(ms)); } catch (e: any) { pack.errors.push(`${label}: ${e?.name === 'TimeoutError' ? 'timed out' : e?.message ?? e}`); }
     i++;
   }
   onProgress?.('Done', steps.length, steps.length);

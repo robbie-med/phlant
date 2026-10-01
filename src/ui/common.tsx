@@ -19,7 +19,7 @@ export function MoonDisc({ phase, size = 120, lat = 36 }: { phase: number; size?
   const sweepLimb = litRight ? 1 : 0;
   const rx = Math.abs(k) * r;
   // Lit region = half disc on lit side + (if k<0 i.e. gibbous) the terminator bulge on dark side, else minus the crescent bite.
-  const termSweep = (k < 0) === litRight ? 0 : 1;
+  const termSweep = (k < 0) === litRight ? 1 : 0;
   const path = `M ${cx} ${cy - r} A ${r} ${r} 0 0 ${sweepLimb} ${cx} ${cy + r} A ${rx} ${r} 0 0 ${termSweep} ${cx} ${cy - r} Z`;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`Moon, phase ${Math.round(phase)}°`}>

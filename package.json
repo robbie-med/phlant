@@ -6,7 +6,7 @@
   "description": "Comparative moon-planting almanac: Korean, Chinese, biodynamic, French, Russian, English & American Northeast traditions computed from real ephemeris, plus garden layout and companion planting.",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 3917 --strictPort",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && NODE_OPTIONS=--experimental-global-webcrypto vite build",
     "preview": "vite preview --host 127.0.0.1 --port 3510 --strictPort",
     "test": "vitest run",
     "cap:init": "npx cap init phlant org.robbiemed.phlant --web-dir dist",

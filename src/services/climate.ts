@@ -7,7 +7,7 @@ export async function geocode(q: string, signal?: AbortSignal): Promise<Place[]>
 }
 
 export interface FrostStats {
-  years: number; source: string;
+  years: number; source: string; thresholdC: number;
   lastSpring: { median: string; p10: string; p90: string; perYear: Record<string, string | null> }; // MM-DD
   firstFall: { median: string; p10: string; p90: string; perYear: Record<string, string | null> };
   frostFreeDays: number;
@@ -23,7 +23,8 @@ function doyToMD(doy: number, y = 2001) { return new Date(Date.UTC(y, 0, Math.ro
 function zoneFromMin(c: number) { const f = c * 9 / 5 + 32; const z = Math.floor((f + 60) / 10) + 1; const half = ((f + 60) % 10) < 5 ? 'a' : 'b'; return `${Math.max(1, Math.min(13, z))}${half}`; }
 
 /** Ten years of ERA5 daily data from Open-Meteo → frost dates, zone, GDD, monthly normals. */
-export async function fetchFrostStats(lat: number, lon: number, signal?: AbortSignal, thresholdC = 0): Promise<FrostStats> {
+export async function fetchFrostStats(lat: number, lon: number, signal?: AbortSignal, thresholdC = 2): Promise<FrostStats> {
+  // 2 °C at 2 m ≈ ground frost; ERA5 also runs warm on clear nights. Checked against NWS Tulsa normals: median Mar 29 / safe Apr 19 / first Oct 30.
   const endY = new Date().getUTCFullYear() - 1, startY = endY - 9;
   const u = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startY}-01-01&end_date=${endY}-12-31&daily=temperature_2m_min,temperature_2m_max,precipitation_sum&timezone=auto`;
   const res = await fetch(u, { signal }); if (!res.ok) throw new Error(`archive ${res.status}`);
@@ -59,7 +60,7 @@ export async function fetchFrostStats(lat: number, lon: number, signal?: AbortSi
   const lsMed = ls.length ? quantile(ls, 0.5) : 60, ffMed = ff.length ? quantile(ff, 0.5) : 320;
   const meanMin = annualMin.reduce((a, b) => a + b, 0) / annualMin.length;
   return {
-    years: years.length, source: `Open-Meteo ERA5 reanalysis ${startY}–${endY}`,
+    years: years.length, source: `Open-Meteo ERA5 reanalysis ${startY}–${endY}`, thresholdC,
     lastSpring: { median: toMD(lsMed), p10: toMD(ls.length ? quantile(ls, 0.1) : lsMed), p90: toMD(ls.length ? quantile(ls, 0.9) : lsMed), perYear: Object.fromEntries(Object.entries(lastSpring).map(([y, v]) => [y, v == null ? null : toMD(v)])) },
     firstFall: { median: toMD(ffMed), p10: toMD(ff.length ? quantile(ff, 0.1) : ffMed), p90: toMD(ff.length ? quantile(ff, 0.9) : ffMed), perYear: Object.fromEntries(Object.entries(firstFall).map(([y, v]) => [y, v == null ? null : toMD(v)])) },
     frostFreeDays: Math.round(ffMed - lsMed),

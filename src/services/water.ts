@@ -10,12 +10,12 @@ function haversine(a: [number, number], b: [number, number]) { const R = 6371, d
 export async function fetchGauges(lat: number, lon: number, radiusKm = 25, signal?: AbortSignal): Promise<Gauge[]> {
   const dLat = radiusKm / 111, dLon = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
   const bbox = `${lon - dLon},${lat - dLat},${lon + dLon},${lat + dLat}`;
-  const u = `https://api.waterdata.usgs.gov/ogcapi/v0/collections/monitoring-locations/items?bbox=${bbox}&f=json&limit=100`;
+  const u = `https://api.waterdata.usgs.gov/ogcapi/v0/collections/monitoring-locations/items?bbox=${bbox}&f=json&limit=500`;
   const res = await fetch(u, { signal });
   if (!res.ok) throw new Error(`USGS ${res.status}`);
   const j = await res.json();
   return (j.features ?? []).map((f: any) => ({ id: f.id, name: f.properties.monitoring_location_name, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0], siteType: f.properties.site_type_code ?? f.properties.site_type, distanceKm: haversine([lat, lon], [f.geometry.coordinates[1], f.geometry.coordinates[0]]) }))
-    .sort((a: Gauge, b: Gauge) => a.distanceKm - b.distanceKm);
+    .sort((a: Gauge, b: Gauge) => a.distanceKm - b.distanceKm).slice(0, 40);
 }
 
 /** Latest continuous readings (needs network each time). */

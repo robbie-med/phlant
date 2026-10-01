@@ -16,7 +16,7 @@ export function textureClass(sand: number, silt: number, clay: number): SoilType
 const SDA = 'https://sdmdataaccess.sc.egov.usda.gov/Tabular/post.rest';
 
 export async function fetchSSURGO(lat: number, lon: number, signal?: AbortSignal): Promise<SoilReport | null> {
-  const d = 0.0015; // ~150 m box so an "Urban land" pin still shows neighbouring natural soils
+  const d = 0.004; // ~400 m box so an "Urban land" pin still shows the neighbouring natural soils
   const wkt = `polygon((${lon - d} ${lat - d}, ${lon + d} ${lat - d}, ${lon + d} ${lat + d}, ${lon - d} ${lat + d}, ${lon - d} ${lat - d}))`;
   const query = `SELECT mu.mukey, mu.muname, c.compname, c.comppct_r, c.taxorder, c.taxsubgrp, c.drainagecl, c.hydgrp, c.slope_r, c.hydricrating, c.nirrcapcl, ch.hzname, ch.hzdept_r, ch.hzdepb_r, ch.sandtotal_r, ch.silttotal_r, ch.claytotal_r, ch.ph1to1h2o_r, ch.om_r, ch.awc_r, ch.ksat_r, ct.texdesc FROM mapunit mu INNER JOIN component c ON c.mukey=mu.mukey LEFT JOIN chorizon ch ON ch.cokey=c.cokey LEFT JOIN chtexturegrp ct ON ct.chkey=ch.chkey AND ct.rvindicator='Yes' WHERE mu.mukey IN (SELECT * FROM SDA_Get_Mukey_from_intersection_with_WktWgs84('${wkt}')) AND c.majcompflag='Yes' ORDER BY c.comppct_r DESC, ch.hzdept_r`;
   const res = await fetch(SDA, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format: 'JSON+COLUMNNAME', query }), signal });
@@ -41,7 +41,7 @@ export async function fetchSSURGO(lat: number, lon: number, signal?: AbortSignal
 export function summarize(components: SoilComponent[]): SoilReport['summary'] {
   // first component with real topsoil data (skip Urban land / Water)
   const c = components.find(c => c.horizons.some(h => h.clay != null && h.topCm < 30)) ?? components[0];
-  if (!c) return { type: 'loam', label: 'No soil survey data here' };
+  if (!c || !c.horizons.some(h => h.clay != null)) return { type: 'loam', label: `${c ? c.name + ' — ' : ''}no texture data in the survey here (urban/water); keep your own soil type and do a jar test` };
   const top = c.horizons.filter(h => h.clay != null && h.topCm < 30);
   const w = top.reduce((s, h) => s + (h.bottomCm - h.topCm), 0) || 1;
   const avg = (k: 'sand' | 'silt' | 'clay' | 'ph') => top.length ? top.reduce((s, h) => s + (h[k] ?? 0) * (h.bottomCm - h.topCm), 0) / w : undefined;

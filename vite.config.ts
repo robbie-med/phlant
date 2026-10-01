@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { webcrypto } from 'node:crypto';
+// Node 18 has no global crypto; workbox-build needs it.
+if (!(globalThis as any).crypto?.subtle) Object.defineProperty(globalThis, 'crypto', { value: webcrypto, configurable: true, writable: true });
 
 // Ports are governed by /home/user/Projects/PORTS.md: 3917 = Vite dev, 3510 = preview.
 export default defineConfig({
