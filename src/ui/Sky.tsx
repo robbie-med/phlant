@@ -265,11 +265,13 @@ function MonthStrip({ month, setMonth, today }: { month: string; setMonth: (m: s
           {rows.map((r, i) => <g key={r.ymd} transform={`translate(${X(i) - 9}, 25)`} onClick={() => setState({ selectedDate: r.ymd, tab: 'today' })} style={{ cursor: 'pointer' }}><circle cx={9} cy={9} r={8} fill="#22301f" /><path d={miniMoonPath(r.m.phaseAngle, 9, 9, 8, north)} fill="var(--moon)" /><title>{r.ymd}: {Math.round(r.m.illumination * 100)}% lit</title></g>)}
           {rows.filter(r => r.m.isNewMoonDay || r.m.isFullMoonDay).map(r => <text key={'p' + r.ymd} x={X(rows.indexOf(r))} y={54} fontSize={7} textAnchor="middle" fill="var(--accent2)">{r.m.isNewMoonDay ? 'new' : 'full'}</text>)}
         </Panel>
-        <Panel y0={64} h={40} label="2 · Through the stars" sub="top: tropical sign · bottom: real constellation · colour = element → plant part">
+        <Panel y0={64} h={40} label="2 · Through the stars" sub="top: tropical sign · bottom: real constellation · | = exact moment the Moon enters the next sign · colour = element">
           {rows.map((r, i) => <rect key={'t' + r.ymd} x={x0 + i * cw} y={68} width={cw} height={14} fill={ELEMENT_COLOR[SIGN_ELEMENT[r.m.tropical]]} opacity={.85}><title>{r.ymd}: tropical {r.m.tropical}</title></rect>)}
-          {rows.map((r, i) => (i === 0 || rows[i - 1].m.tropical !== r.m.tropical) ? <text key={'tg' + r.ymd} x={x0 + i * cw + 2} y={79} fontSize={9} fill="#0f1a13">{SIGN_GLYPH[r.m.tropical]}</text> : null)}
+          <text x={x0 + 2} y={79} fontSize={9} fill="#0f1a13">{SIGN_GLYPH[rows[0].m.tropical]}</text>
+          {ingresses.filter(g => g.kind === 'tropical').map((g, i) => <text key={'tg' + i} x={tX(g.time) + 2} y={79} fontSize={9} fill="#0f1a13">{SIGN_GLYPH[g.to]}</text>)}
           {rows.map((r, i) => <rect key={'s' + r.ymd} x={x0 + i * cw} y={86} width={cw} height={14} fill={ELEMENT_COLOR[SIGN_ELEMENT[r.m.sidereal]]} opacity={.55}><title>{r.ymd}: constellation {r.m.sidereal}</title></rect>)}
-          {rows.map((r, i) => (i === 0 || rows[i - 1].m.sidereal !== r.m.sidereal) ? <text key={'sg' + r.ymd} x={x0 + i * cw + 2} y={97} fontSize={9} fill="#0f1a13">{SIGN_GLYPH[r.m.sidereal]}</text> : null)}
+          <text x={x0 + 2} y={97} fontSize={9} fill="#0f1a13">{SIGN_GLYPH[rows[0].m.sidereal]}</text>
+          {ingresses.filter(g => g.kind === 'sidereal').map((g, i) => <text key={'sg' + i} x={tX(g.time) + 2} y={97} fontSize={9} fill="#0f1a13">{SIGN_GLYPH[g.to]}</text>)}
           {ingresses.map((g, i) => <line key={'ing' + i} x1={tX(g.time)} x2={tX(g.time)} y1={g.kind === 'tropical' ? 66 : 84} y2={g.kind === 'tropical' ? 84 : 102} stroke="#0f1a13" strokeWidth={1.2}><title>{g.kind === 'tropical' ? 'Enters' : 'Enters constellation'} {g.to} at {fmtDateTime(g.time, site.tz)}</title></line>)}
         </Panel>
         <Panel y0={110} h={90} label="3 · High and low" sub="declination: Moon's arc climbs (ascending ↗) then sinks (descending ↘). Line = celestial equator.">

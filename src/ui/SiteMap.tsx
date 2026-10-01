@@ -21,7 +21,9 @@ export default function SiteMap({ lat, lon, onMove, acres, onAcres, inUS }: Prop
 
   useEffect(() => {
     const el = ref.current; if (!el || map.current) return;
-    const m = L.map(el, { zoomControl: true, attributionControl: true }).setView([lat, lon], 16);
+    const m = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: false }).setView([lat, lon], 16);
+    // page scrolls by default; wheel-zoom only after the map is clicked
+    m.on('click focus', () => m.scrollWheelZoom.enable()); m.on('mouseout blur', () => m.scrollWheelZoom.disable());
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(m);
     const icon = L.divIcon({ className: '', html: '<div style="width:18px;height:18px;border-radius:50%;background:#e07a6a;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
     marker.current = L.marker([lat, lon], { draggable: true, icon }).addTo(m);
@@ -30,7 +32,7 @@ export default function SiteMap({ lat, lon, onMove, acres, onAcres, inUS }: Prop
     soilLayer.current = L.layerGroup().addTo(m);
     map.current = m;
     setTimeout(() => m.invalidateSize(), 50);
-    return () => { m.remove(); map.current = null; };
+    return () => { try { m.off(); m.remove(); } catch { /* mid-animation */ } map.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -40,7 +42,7 @@ export default function SiteMap({ lat, lon, onMove, acres, onAcres, inUS }: Prop
     marker.current?.setLatLng([lat, lon]);
     const [s, w, n, e] = acreBox(lat, lon, acres);
     if (box.current) box.current.setBounds([[s, w], [n, e]]); else box.current = L.rectangle([[s, w], [n, e]], { color: '#f1e6c0', weight: 2, dashArray: '6 4', fill: false }).addTo(m);
-    m.fitBounds([[s, w], [n, e]], { padding: [20, 20] });
+    m.fitBounds([[s, w], [n, e]], { padding: [20, 20], animate: false });
     if (inUS && showLines) { if (!wms.current) { wms.current = L.tileLayer.wms('https://SDMDataAccess.sc.egov.usda.gov/Spatial/SDM.wms', { layers: 'mapunitpolyextended', format: 'image/png', transparent: true, opacity: 0.85, attribution: 'Soil lines © USDA-NRCS SSURGO' }); } if (!m.hasLayer(wms.current)) wms.current.addTo(m); } else if (wms.current && m.hasLayer(wms.current)) m.removeLayer(wms.current);
   }, [lat, lon, acres, inUS, showLines]);
 
@@ -61,7 +63,7 @@ export default function SiteMap({ lat, lon, onMove, acres, onAcres, inUS }: Prop
         {inUS && <label className="row" style={{ fontSize: 13 }}><input type="checkbox" checked={showLines} onChange={e => setShowLines(e.target.checked)} />official soil lines (USDA WMS)</label>}
       </div>
       <div ref={ref} style={{ height: 420, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--bg2)' }} />
-      <p className="sr" style={{ marginTop: 6 }}>Click the map or drag the pin to move your site. Dashed square = the area analysed. Map © OpenStreetMap contributors (ODbL); soil polygons and lines © USDA-NRCS Web Soil Survey (SSURGO).</p>
+      <p className="sr" style={{ marginTop: 6 }}>Click the map once to enable wheel zoom. Click the map or drag the pin to move your site. Dashed square = the area analysed. Map © OpenStreetMap contributors (ODbL); soil polygons and lines © USDA-NRCS Web Soil Survey (SSURGO).</p>
       {inUS ? (
         <div style={{ marginTop: 8 }}>
           {busy && <div className="skeleton" style={{ height: 14, width: 200 }} />}
